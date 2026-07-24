@@ -177,7 +177,18 @@ async def process_address(message: types.Message, state: FSMContext):
     await message.answer(order_success_msg, parse_mode="Markdown")
 
 
-import bonuses
+def save_products(products):
+    try:
+        with open("products.json", "w", encoding="utf-8") as f:
+            json.dump(products, f, ensure_ascii=False, indent=2)
+    except OSError:
+        import tempfile
+        tmp_path = os.path.join(tempfile.gettempdir(), "products.json")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(products, f, ensure_ascii=False, indent=2)
+
+
+import categories
 
 
 @dp.message(F.text)
@@ -192,6 +203,8 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     if user_text and user_text.startswith("/"):
         return
 
+    is_user_admin = admin.is_admin(user_id)
+
     # 1. Зберігаємо повідомлення користувача
     storage.save_message(user_id, "user", user_text)
 
@@ -203,7 +216,7 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     user_orders = storage.get_orders(user_id=user_id)
     promos = web_server.load_promos()
 
-    # 3. Викликаємо Сверхрозумного AI-менеджера
+    # 3. Викликаємо AI-менеджера з підтримкою адмін-команд
     ai_response = ai_manager.generate_reply(
         message=user_text,
         history=history,
@@ -211,7 +224,8 @@ async def handle_user_text(message: types.Message, state: FSMContext):
         user_cart=cart_info["items"],
         user_bonuses=user_b_val,
         user_orders=user_orders,
-        promos=promos
+        promos=promos,
+        is_admin=is_user_admin
     )
 
     reply_text = ai_response.get("reply", "")
@@ -278,7 +292,7 @@ async def handle_user_text(message: types.Message, state: FSMContext):
             ])
             try:
                 await bot.send_message(
-                    chat_id=int(admin_id),
+                    chat_id=int(admin_id.split(",")[0]),
                     text=f"📥 **Нова пропозиція ціни (Торг)!**\n\n"
                          f"👤 Покупець ID: `{user_id}` (@{message.from_user.username or 'немає'})\n"
                          f"🛍️ Товар: **{p_title}**\n"
@@ -290,6 +304,80 @@ async def handle_user_text(message: types.Message, state: FSMContext):
                 reply_text += f"\n\n🤝 Дякуємо! Вашу пропозицію **{offered_price} грн** передано продавцю. Бот сповістить вас одразу після рішення!"
             except Exception as e:
                 print(f"[Send Offer Error]: {e}")
+
+    # --- AUTOMATIC AI ADMIN ACTIONS ---
+    elif is_user_admin and action.startswith("admin_"):
+        if action == "admin_add_product":
+            p_name = ai_response.get("product_name") or "Новий товар"
+            p_price = float(ai_response.get("product_price") or 0.0)
+            cat_name = ai_response.get("category_name") or "Фігурки"
+            cond = ai_response.get("condition") or "Mint 10/10"
+            desc = ai_response.get("description") or "Якісний колекційний товар"
+            new_id = max([p["id"] for p in products], default=0) + 1
+            new_p = {
+                "id": new_id,
+                "name": p_name,
+                "description": desc,
+                "price": p_price,
+                "in_stock": True,
+                "category": cat_name,
+                "condition": cond,
+                "rating": 5.0,
+                "image_url": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80"
+            }
+            products.append(new_p)
+            save_products(products)
+            categories.add_category(cat_name)
+            reply_text += f"\n\n✅ [AI Admin]: Товар **«{p_name}»** ({p_price} грн) успішно додано!"
+
+        elif action == "admin_delete_product":
+            p_id = ai_response.get("product_id")
+            p_name = ai_response.get("product_name")
+            target = None
+            if p_id:
+                target = next((p for p in products if p["id"] == p_id), None)
+            elif p_name:
+                target = next((p for p in products if p_name.lower() in p["name"].lower()), None)
+            
+            if target:
+                products.remove(target)
+                save_products(products)
+                reply_text += f"\n\n🗑️ [AI Admin]: Товар **«{target['name']}»** (ID: {target['id']}) видалено!"
+            else:
+                reply_text += "\n\n⚠️ [AI Admin]: Товар не знайдено."
+
+        elif action == "admin_add_category":
+            c_name = ai_response.get("category_name")
+            if c_name and categories.add_category(c_name):
+                reply_text += f"\n\n🗂️ [AI Admin]: Новий розділ **«{c_name}»** створено!"
+            else:
+                reply_text += f"\n\n⚠️ Розділ вже існує або назву не вказано."
+
+        elif action == "admin_delete_category":
+            c_name = ai_response.get("category_name")
+            if c_name and categories.delete_category(c_name):
+                reply_text += f"\n\n❌ [AI Admin]: Розділ **«{c_name}»** видалено!"
+            else:
+                reply_text += f"\n\n⚠️ Розділ не знайдено."
+
+        elif action == "admin_add_promo":
+            pr_code = (ai_response.get("promo_code") or "").strip().upper()
+            pct = int(ai_response.get("discount_percent") or 10)
+            if pr_code:
+                promos = web_server.load_promos()
+                promos[pr_code] = {"discount_percent": pct, "active": True}
+                web_server.save_promos(promos)
+                reply_text += f"\n\n🏷️ [AI Admin]: Промокод `{pr_code}` на **{pct}%** активовано!"
+
+        elif action == "admin_update_order":
+            o_id = ai_response.get("order_id")
+            n_st = ai_response.get("new_status") or "completed"
+            if o_id:
+                updated = storage.update_order_status(o_id, n_st)
+                if updated:
+                    reply_text += f"\n\n📦 [AI Admin]: Статус замовлення #{o_id} змінено на **{n_st}**!"
+                else:
+                    reply_text += f"\n\n⚠️ Замовлення #{o_id} не знайдено."
 
     elif action == "manager":
         reply_text += "\n\n🔔 (Повідомлення передано менеджеру-людині)."
