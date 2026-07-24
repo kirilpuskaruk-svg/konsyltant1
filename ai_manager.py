@@ -73,7 +73,7 @@ def generate_reply(message: str, history: list, products: list) -> dict:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -94,6 +94,7 @@ def generate_reply(message: str, history: list, products: list) -> dict:
         }
 
     except Exception as e:
+        print(f"[AI Manager Error]: {e}")
         # У разі помилки виклику або парсингу повертаємо безпечний фолбек з передачею менеджеру
         return {
             "reply": "Вибачте, виникла невеличка технічна запинка. Передаю ваше запит нашому менеджеру, він зв'яжеться з вами найближчим часом! 🍪",
