@@ -27,19 +27,19 @@ class AdminBroadcast(StatesGroup):
     text = State()
 
 
-def get_admin_id():
-    admin_id_env = os.getenv("ADMIN_ID")
+def get_admin_ids() -> list:
+    admin_id_env = os.getenv("ADMIN_ID", "")
     if admin_id_env:
-        return str(admin_id_env).strip()
-    return None
+        return [x.strip() for x in str(admin_id_env).replace(";", ",").split(",") if x.strip()]
+    return []
 
 
 def is_admin(user_id: int) -> bool:
-    admin_id = get_admin_id()
-    if not admin_id:
+    admin_ids = get_admin_ids()
+    if not admin_ids:
         # Fallback: if ADMIN_ID is not set in env, allow access for testing/setup
         return True
-    return str(user_id) == str(admin_id)
+    return str(user_id) in admin_ids
 
 
 def get_main_admin_keyboard():
