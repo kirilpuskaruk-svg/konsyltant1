@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: cookie-bot-cloud
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: WEB_APP_URL
+        value: https://webapp-puce-ten-76.vercel.app
+      - key: ADMIN_ID
+        sync: false
