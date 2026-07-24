@@ -46,13 +46,14 @@ def get_main_admin_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="📦 Замовлення", callback_data="admin_orders_all"),
-            InlineKeyboardButton(text="🍪 Асортимент", callback_data="admin_products")
+            InlineKeyboardButton(text="🛍️ Асортимент", callback_data="admin_products")
+        ],
+        [
+            InlineKeyboardButton(text="🗂️ Керування Розділами", callback_data="admin_categories"),
+            InlineKeyboardButton(text="📢 Розсилка", callback_data="admin_broadcast")
         ],
         [
             InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats"),
-            InlineKeyboardButton(text="📢 Масова розсилка", callback_data="admin_broadcast")
-        ],
-        [
             InlineKeyboardButton(text="🏷️ Промокоди", callback_data="admin_promos")
         ],
         [
@@ -607,3 +608,79 @@ async def cb_reject_offer(callback: types.CallbackQuery, bot: Bot):
         callback.message.text + f"\n\n❌ **ВІДХИЛЕНО** ціну {offered_price} грн."
     )
     await callback.answer("Пропозицію відхилено.")
+
+
+# ==================== 8. КЕРУВАННЯ КАТЕГОРІЯМИ ====================
+
+import categories
+
+
+class CategoryState(StatesGroup):
+    waiting_for_category_name = State()
+
+
+@router.callback_query(F.data == "admin_categories")
+async def cb_admin_categories(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    cats = categories.load_categories()
+    products = load_products()
+
+    text = "🗂️ **Керування Розділами/Категоріями Магазину**:\n\n"
+    for cat in cats:
+        count = sum(1 for p in products if p.get("category") == cat)
+        text += f"• **{cat}** — {count} товар(ів)\n"
+
+    kb_buttons = [
+        [InlineKeyboardButton(text="➕ Додати новий розділ", callback_data="admin_cat_add")],
+    ]
+
+    for cat in cats:
+        kb_buttons.append([
+            InlineKeyboardButton(text=f"❌ Видалити «{cat}»", callback_data=f"admin_cat_del:{cat}")
+        ])
+
+    kb_buttons.append([InlineKeyboardButton(text="« Назад в меню", callback_data="admin_menu")])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb_buttons)
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_cat_add")
+async def cb_admin_cat_add(callback: types.CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+
+    await state.set_state(CategoryState.waiting_for_category_name)
+    await callback.message.answer("✏️ Введіть назву нового розділу/категорії:")
+    await callback.answer()
+
+
+@router.message(CategoryState.waiting_for_category_name)
+async def process_new_category_name(message: types.Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+
+    cat_name = message.text.strip()
+    if categories.add_category(cat_name):
+        await message.answer(f"🎉 Розділ **«{cat_name}»** успішно додано!", parse_mode="Markdown")
+    else:
+        await message.answer("⚠️ Такий розділ вже існує або введено некоректну назву.")
+
+    await state.clear()
+
+
+@router.callback_query(F.data.startswith("admin_cat_del:"))
+async def cb_admin_cat_del(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    cat_name = callback.data.split(":", 1)[1]
+    if categories.delete_category(cat_name):
+        await callback.answer(f"Розділ «{cat_name}» видалено!")
+    else:
+        await callback.answer("Помилка видалення.")
+
+    await cb_admin_categories(callback)

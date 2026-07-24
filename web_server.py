@@ -170,12 +170,21 @@ async def handle_make_offer(request):
         return web.json_response({"success": False, "error": str(e)}, status=400)
 
 
+import categories
+
+
+async def handle_get_categories(request):
+    cats = categories.load_categories()
+    return web.json_response(cats)
+
+
 def create_app():
     app = web.Application()
     app.router.add_get("/", handle_index)
     app.router.add_get("/style.css", handle_css)
     app.router.add_get("/app.js", handle_js)
     app.router.add_get("/api/products", handle_get_products)
+    app.router.add_get("/api/categories", handle_get_categories)
     app.router.add_get("/api/user_bonuses", handle_get_bonuses)
     app.router.add_post("/api/validate_promo", handle_validate_promo)
     app.router.add_post("/api/checkout", handle_checkout)
