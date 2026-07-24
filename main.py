@@ -301,6 +301,10 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
 async def main():
     print("Cookie Shop Bot starting polling...")
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        print(f"[Delete Webhook Warning]: {e}")
     await dp.start_polling(bot)
 
 

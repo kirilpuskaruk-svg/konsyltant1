@@ -11,6 +11,7 @@ import reviews
 async def start_bot_task(app):
     try:
         import main as bot_main
+        await bot_main.bot.delete_webhook(drop_pending_updates=True)
         asyncio.create_task(bot_main.dp.start_polling(bot_main.bot))
     except Exception as e:
         print(f"[Start Bot Task Error]: {e}")
