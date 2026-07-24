@@ -6,18 +6,11 @@ PRODUCTS_FILE = "products.json"
 
 
 def _load_products():
-    if os.path.exists(PRODUCTS_FILE):
-        try:
-            with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError):
-            return []
-    return []
+    return storage._read_json(PRODUCTS_FILE, [])
 
 
 def _save_products(products):
-    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
+    storage._write_json(PRODUCTS_FILE, products)
 
 
 def toggle_product_stock(product_id):

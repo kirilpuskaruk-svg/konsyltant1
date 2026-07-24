@@ -1,31 +1,19 @@
-import json
-import os
+import storage
 from typing import List
 
 CATEGORIES_FILE = "categories.json"
 DEFAULT_CATEGORIES = ["Фігурки", "Одяг та Мерч", "Колекційне"]
 
 def load_categories() -> List[str]:
-    if not os.path.exists(CATEGORIES_FILE):
+    cats = storage._read_json(CATEGORIES_FILE, None)
+    if cats is None or not isinstance(cats, list):
         save_categories(DEFAULT_CATEGORIES)
         return DEFAULT_CATEGORIES
-    try:
-        with open(CATEGORIES_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                return data
-            return DEFAULT_CATEGORIES
-    except Exception as e:
-        print(f"[Categories Load Error]: {e}")
-        return DEFAULT_CATEGORIES
+    return cats
 
 
 def save_categories(categories: List[str]):
-    try:
-        with open(CATEGORIES_FILE, "w", encoding="utf-8") as f:
-            json.dump(categories, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"[Categories Save Error]: {e}")
+    storage._write_json(CATEGORIES_FILE, categories)
 
 
 def add_category(category_name: str) -> bool:
