@@ -549,7 +549,7 @@ async def cb_admin_promos(callback: types.CallbackQuery):
 
 # ==================== 7. ОБРОБКА ТОРГУ (MAKE AN OFFER) ====================
 
-@router.callback_query(F.data & F.data.startswith("offer_acc:"))
+@router.callback_query(F.data.startswith("offer_acc:"))
 async def cb_accept_offer(callback: types.CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
         await callback.answer("⛔ У вас немає прав адміна.", show_alert=True)
@@ -592,7 +592,7 @@ async def cb_accept_offer(callback: types.CallbackQuery, bot: Bot):
     await callback.answer("✅ Пропозицію прийнято!")
 
 
-@router.callback_query(F.data & F.data.startswith("offer_rej:"))
+@router.callback_query(F.data.startswith("offer_rej:"))
 async def cb_reject_offer(callback: types.CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
         await callback.answer("⛔ У вас немає прав адміна.", show_alert=True)
