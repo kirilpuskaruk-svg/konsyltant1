@@ -1,10 +1,19 @@
 import os
 import json
+import asyncio
 from aiohttp import web
 import storage
 import cart
 import bonuses
 import reviews
+
+
+async def start_bot_task(app):
+    try:
+        import main as bot_main
+        asyncio.create_task(bot_main.dp.start_polling(bot_main.bot))
+    except Exception as e:
+        print(f"[Start Bot Task Error]: {e}")
 
 PROMOS_FILE = "promos.json"
 
@@ -176,13 +185,6 @@ import categories
 async def handle_get_categories(request):
     cats = categories.load_categories()
     return web.json_response(cats)
-
-
-import main as bot_main
-
-
-async def start_bot_task(app):
-    asyncio.create_task(bot_main.dp.start_polling(bot_main.bot))
 
 
 def create_app():

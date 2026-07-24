@@ -178,7 +178,6 @@ async def process_address(message: types.Message, state: FSMContext):
 
 
 import bonuses
-import web_server
 
 
 @dp.message(F.text)
