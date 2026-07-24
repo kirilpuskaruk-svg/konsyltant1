@@ -190,6 +190,9 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_text = message.text
 
+    if user_text and user_text.startswith("/"):
+        return
+
     # 1. Зберігаємо повідомлення користувача
     storage.save_message(user_id, "user", user_text)
 
