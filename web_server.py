@@ -178,8 +178,16 @@ async def handle_get_categories(request):
     return web.json_response(cats)
 
 
+import main as bot_main
+
+
+async def start_bot_task(app):
+    asyncio.create_task(bot_main.dp.start_polling(bot_main.bot))
+
+
 def create_app():
     app = web.Application()
+    app.on_startup.append(start_bot_task)
     app.router.add_get("/", handle_index)
     app.router.add_get("/style.css", handle_css)
     app.router.add_get("/app.js", handle_js)
@@ -194,5 +202,6 @@ def create_app():
 
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8080))
     app = create_app()
-    web.run_app(app, host="0.0.0.0", port=8080)
+    web.run_app(app, host="0.0.0.0", port=port)
