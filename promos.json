@@ -1,0 +1,14 @@
+{
+  "COOKIE10": {
+    "discount_percent": 10,
+    "active": true
+  },
+  "YARIK20": {
+    "discount_percent": 20,
+    "active": true
+  },
+  "MEGABONUS": {
+    "discount_percent": 15,
+    "active": true
+  }
+}

@@ -53,6 +53,9 @@ def get_main_admin_keyboard():
             InlineKeyboardButton(text="📢 Масова розсилка", callback_data="admin_broadcast")
         ],
         [
+            InlineKeyboardButton(text="🏷️ Промокоди", callback_data="admin_promos")
+        ],
+        [
             InlineKeyboardButton(text="📄 Експорт TXT", callback_data="admin_export_txt"),
             InlineKeyboardButton(text="📁 Експорт CSV", callback_data="admin_export_csv")
         ]
@@ -502,4 +505,35 @@ async def cb_export_csv(callback: types.CallbackQuery):
     document = FSInputFile(csv_file, filename="orders_export.csv")
 
     await callback.message.answer_document(document, caption="📊 Ось експорт усіх замовлень у CSV файлі!")
+    await callback.answer()
+
+
+# ==================== 6. ПРОМОКОДИ ====================
+
+@router.callback_query(F.data == "admin_promos")
+async def cb_admin_promos(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    promos = {}
+    if os.path.exists("promos.json"):
+        try:
+            with open("promos.json", "r", encoding="utf-8") as f:
+                promos = json.load(f)
+        except Exception:
+            pass
+
+    text = "🏷️ **Активні Промокоди Магазину**:\n\n"
+    if not promos:
+        text += "Промокодів не знайдено."
+    else:
+        for code, info in promos.items():
+            st = "✅ Активний" if info.get("active", True) else "🔴 Неактивний"
+            text += f"• **{code}**: знижка **{info.get('discount_percent', 0)}%** ({st})\n"
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="« Назад в меню", callback_data="admin_menu")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()

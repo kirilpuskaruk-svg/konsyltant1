@@ -66,6 +66,9 @@ def get_order_by_id(order_id):
     return None
 
 
+import bonuses
+
+
 def update_order_status(order_id, new_status):
     """
     Updates status for a specific order.
@@ -75,8 +78,17 @@ def update_order_status(order_id, new_status):
     updated = None
     for o in orders:
         if str(o.get("order_id")) == str(order_id):
+            prev_status = o.get("status")
             o["status"] = new_status
             updated = o
+            
+            # Award 5% cashback bonuses when completing order
+            if new_status == "completed" and prev_status != "completed":
+                user_id = o.get("user_id")
+                total_price = float(o.get("total_price", 0))
+                cashback = round(total_price * 0.05, 2)
+                if user_id and cashback > 0:
+                    bonuses.add_user_bonuses(user_id, cashback)
             break
     if updated:
         _write_json(ORDERS_FILE, orders)

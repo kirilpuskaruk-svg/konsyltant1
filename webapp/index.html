@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cookie Shop 🍪 Mini App</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="logo-emoji">🍪</span>
+        <div>
+          <h1>Cookie Shop</h1>
+          <p class="subtitle">Крафтове печиво свіжої випічки</p>
+        </div>
+      </div>
+      <div class="bonus-badge" id="bonusBadge">
+        🏆 <span id="userBonusesCount">0</span> ₴
+      </div>
+    </header>
+
+    <!-- Search & Categories -->
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="🔍 Пошук печива..." />
+    </div>
+
+    <div class="categories" id="categoriesContainer">
+      <button class="cat-chip active" data-cat="all">Всі</button>
+      <button class="cat-chip" data-cat="Шоколадне">🍫 Шоколадне</button>
+      <button class="cat-chip" data-cat="Горіхове">🥜 Горіхове</button>
+      <button class="cat-chip" data-cat="Вівсяне">🌾 Вівсяне</button>
+      <button class="cat-chip" data-cat="Крафтове">✨ Крафтове</button>
+      <button class="cat-chip" data-cat="Фруктове">🍋 Фруктове</button>
+    </div>
+
+    <!-- Products Grid -->
+    <main class="products-grid" id="productsGrid">
+      <!-- Loaded dynamically via JS -->
+    </main>
+
+    <!-- Cart Floating Bar -->
+    <div class="cart-floating-bar hidden" id="cartFloatingBar">
+      <div class="cart-info">
+        <span class="cart-count" id="cartItemCount">0</span>
+        <span class="cart-price" id="cartTotalPrice">0 ₴</span>
+      </div>
+      <button class="btn-checkout" id="btnOpenCheckout">Переглянути кошик 🛒</button>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal-overlay hidden" id="checkoutModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Оформлення Замовлення 📝</h2>
+          <button class="close-modal" id="btnCloseModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="checkout-items-list" id="modalCartItems">
+            <!-- Dynamic Cart Items -->
+          </div>
+
+          <hr class="divider">
+
+          <!-- Promo Code Section -->
+          <div class="promo-section">
+            <input type="text" id="promoInput" placeholder="Промокод (наприклад: COOKIE10)" />
+            <button class="btn-apply-promo" id="btnApplyPromo">Застосувати</button>
+          </div>
+          <div class="promo-message" id="promoMessage"></div>
+
+          <!-- Bonuses Section -->
+          <div class="bonus-use-section">
+            <label class="checkbox-label">
+              <input type="checkbox" id="useBonusesCheckbox" />
+              Використати накопичений кешбек (<span id="availBonuses">0</span> ₴)
+            </label>
+          </div>
+
+          <hr class="divider">
+
+          <!-- Shipping Form -->
+          <form id="orderForm">
+            <div class="form-group">
+              <label>Ваше ПІБ / Ім'я:</label>
+              <input type="text" id="orderName" required placeholder="Олександр Петренко" />
+            </div>
+            <div class="form-group">
+              <label>Номер телефону:</label>
+              <input type="tel" id="orderPhone" required placeholder="+380991234567" />
+            </div>
+            <div class="form-group">
+              <label>📦 Нова Пошта (Місто та № відділення / поштомату):</label>
+              <input type="text" id="orderAddress" required placeholder="Київ, Відділення №15 (вул. Хрещатик)" />
+            </div>
+
+            <div class="order-summary">
+              <div class="summary-row">
+                <span>Товари:</span>
+                <span id="summarySubtotal">0 ₴</span>
+              </div>
+              <div class="summary-row discount-row" id="discountRow" style="display:none;">
+                <span>Знижка / Бонуси:</span>
+                <span id="summaryDiscount">-0 ₴</span>
+              </div>
+              <div class="summary-row total-row">
+                <span>Разом до сплати:</span>
+                <span id="summaryFinalTotal">0 ₴</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">Підтвердити замовлення 🎉</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
