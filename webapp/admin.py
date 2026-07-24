@@ -552,62 +552,91 @@ async def cb_admin_promos(callback: types.CallbackQuery):
 @router.callback_query(F.data & F.data.startswith("offer_acc:"))
 async def cb_accept_offer(callback: types.CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
+        await callback.answer("⛔ У вас немає прав адміна.", show_alert=True)
         return
 
     parts = callback.data.split(":")
-    buyer_id = int(parts[1])
-    product_id = int(parts[2])
-    offered_price = float(parts[3])
+    try:
+        buyer_id = int(parts[1]) if len(parts) > 1 and parts[1].replace("-", "").isdigit() else 0
+        product_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+        offered_price = float(parts[3]) if len(parts) > 3 else 0.0
+    except Exception as e:
+        await callback.answer(f"Помилка даних: {e}", show_alert=True)
+        return
 
     products = load_products()
     product = next((p for p in products if p["id"] == product_id), None)
     product_name = product["name"] if product else f"Товар #{product_id}"
 
-    try:
-        await bot.send_message(
-            chat_id=buyer_id,
-            text=f"🎉 **Вітаємо! Продавець ПРИЙНЯВ вашу пропозицію!**\n\n"
-                 f"🛍️ Товар: **{product_name}**\n"
-                 f"💰 Узгоджена ціна: **{offered_price} грн**!\n\n"
-                 f"Ви можете оформити замовлення через команду /checkout або Mini App! 🚀"
-        )
-    except Exception as e:
-        print(f"[Accept Offer Error]: {e}")
+    if buyer_id > 0:
+        try:
+            await bot.send_message(
+                chat_id=buyer_id,
+                text=f"🎉 <b>Вітаємо! Продавець ПРИЙНЯВ вашу пропозицію!</b>\n\n"
+                     f"🛍️ Товар: <b>{product_name}</b>\n"
+                     f"💰 Узгоджена ціна: <b>{offered_price} грн</b>!\n\n"
+                     f"Ви можете оформити замовлення через Mini App або написати менеджеру! 🚀",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            print(f"[Accept Offer Notification Error]: {e}")
 
-    await callback.message.edit_text(
-        callback.message.text + f"\n\n✅ **ПРИЙНЯТО** ціну {offered_price} грн для користувача {buyer_id}."
-    )
-    await callback.answer("Пропозицію прийнято!")
+    status_kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+        types.InlineKeyboardButton(text=f"✅ Прийнято ({offered_price} грн)", callback_data="noop")
+    ]])
+    try:
+        await callback.message.edit_reply_markup(reply_markup=status_kb)
+    except Exception:
+        pass
+
+    await callback.answer("✅ Пропозицію прийнято!")
 
 
 @router.callback_query(F.data & F.data.startswith("offer_rej:"))
 async def cb_reject_offer(callback: types.CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
+        await callback.answer("⛔ У вас немає прав адміна.", show_alert=True)
         return
 
     parts = callback.data.split(":")
-    buyer_id = int(parts[1])
-    product_id = int(parts[2])
-    offered_price = float(parts[3])
+    try:
+        buyer_id = int(parts[1]) if len(parts) > 1 and parts[1].replace("-", "").isdigit() else 0
+        product_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+        offered_price = float(parts[3]) if len(parts) > 3 else 0.0
+    except Exception as e:
+        await callback.answer(f"Помилка даних: {e}", show_alert=True)
+        return
 
     products = load_products()
     product = next((p for p in products if p["id"] == product_id), None)
     product_name = product["name"] if product else f"Товар #{product_id}"
 
-    try:
-        await bot.send_message(
-            chat_id=buyer_id,
-            text=f"🔴 **Дякуємо за вашу пропозицію!**\n\n"
-                 f"На жаль, продавець відхилив ціну **{offered_price} грн** на **{product_name}**.\n"
-                 f"Ви можете запропонувати іншу ціну або придбати товар за оригінальною вартістю."
-        )
-    except Exception as e:
-        print(f"[Reject Offer Error]: {e}")
+    if buyer_id > 0:
+        try:
+            await bot.send_message(
+                chat_id=buyer_id,
+                text=f"🔴 <b>Дякуємо за вашу пропозицію!</b>\n\n"
+                     f"На жаль, продавець відхилив ціну <b>{offered_price} грн</b> на <b>{product_name}</b>.\n"
+                     f"Ви можете запропонувати іншу ціну або придбати товар за оригінальною вартістю у Mini App.",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            print(f"[Reject Offer Notification Error]: {e}")
 
-    await callback.message.edit_text(
-        callback.message.text + f"\n\n❌ **ВІДХИЛЕНО** ціну {offered_price} грн."
-    )
-    await callback.answer("Пропозицію відхилено.")
+    status_kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+        types.InlineKeyboardButton(text=f"❌ Відхилено ({offered_price} грн)", callback_data="noop")
+    ]])
+    try:
+        await callback.message.edit_reply_markup(reply_markup=status_kb)
+    except Exception:
+        pass
+
+    await callback.answer("❌ Пропозицію відхилено.")
+
+
+@router.callback_query(F.data == "noop")
+async def cb_noop(callback: types.CallbackQuery):
+    await callback.answer()
 
 
 # ==================== 8. КЕРУВАННЯ КАТЕГОРІЯМИ ====================
