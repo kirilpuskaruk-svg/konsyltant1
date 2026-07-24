@@ -17,21 +17,52 @@ const user_name = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? (tg.initDa
 
 // Init App
 document.addEventListener("DOMContentLoaded", () => {
+  fetchCategories();
   fetchProducts();
   fetchUserBonuses();
 
   // Search
   document.getElementById("searchInput").addEventListener("input", filterAndRenderProducts);
 
-  // Category filter
-  document.querySelectorAll(".cat-chip").forEach(chip => {
-    chip.addEventListener("click", (e) => {
-      document.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
-      e.target.classList.add("active");
-      activeCategory = e.target.dataset.cat;
-      filterAndRenderProducts();
+  // Category filter & Drag / Wheel Scroll
+  const catContainer = document.getElementById("categoriesContainer");
+  if (catContainer) {
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    catContainer.addEventListener('mousedown', (e) => {
+      isDown = true;
+      catContainer.classList.add('active-grab');
+      startX = e.pageX - catContainer.offsetLeft;
+      scrollLeft = catContainer.scrollLeft;
     });
-  });
+
+    catContainer.addEventListener('mouseleave', () => {
+      isDown = false;
+      catContainer.classList.remove('active-grab');
+    });
+
+    catContainer.addEventListener('mouseup', () => {
+      isDown = false;
+      catContainer.classList.remove('active-grab');
+    });
+
+    catContainer.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - catContainer.offsetLeft;
+      const walk = (x - startX) * 2;
+      catContainer.scrollLeft = scrollLeft - walk;
+    });
+
+    catContainer.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        catContainer.scrollLeft += e.deltaY;
+      }
+    });
+  }
 
   // Modal open / close
   document.getElementById("btnOpenCheckout").addEventListener("click", openCheckoutModal);
@@ -72,6 +103,41 @@ async function fetchUserBonuses() {
     document.getElementById("availBonuses").innerText = userBonuses;
   } catch (err) {
     console.error("Error fetching bonuses:", err);
+  }
+}
+
+async function fetchCategories() {
+  try {
+    const res = await fetch('/api/categories');
+    const cats = await res.json();
+    const container = document.getElementById("categoriesContainer");
+    if (!container || !Array.isArray(cats)) return;
+
+    container.innerHTML = `<button class="cat-chip ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">Всі</button>`;
+    cats.forEach(cat => {
+      let emoji = "📦";
+      if (cat.includes("Фігур")) emoji = "🧸";
+      else if (cat.includes("Одяг") || cat.includes("Мерч")) emoji = "👕";
+      else if (cat.includes("Колекційн")) emoji = "✨";
+
+      const btn = document.createElement("button");
+      btn.className = `cat-chip ${activeCategory === cat ? 'active' : ''}`;
+      btn.dataset.cat = cat;
+      btn.innerHTML = `${emoji} ${cat}`;
+      container.appendChild(btn);
+    });
+
+    container.querySelectorAll(".cat-chip").forEach(chip => {
+      chip.addEventListener("click", (e) => {
+        container.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
+        const target = e.currentTarget;
+        target.classList.add("active");
+        activeCategory = target.dataset.cat;
+        filterAndRenderProducts();
+      });
+    });
+  } catch (err) {
+    console.error("Error fetching categories:", err);
   }
 }
 
