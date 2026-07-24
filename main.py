@@ -46,6 +46,8 @@ WEB_APP_URL = os.getenv("WEB_APP_URL", "").strip()
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
+    user_id = message.from_user.id
+    
     welcome_text = (
         "Вітаю у крафтовому магазині печива Cookie Shop! 🍪✨\n\n"
         "Я ваш особистий AI-консультант. Ви можете запитати у мене про асортимент, "
@@ -53,9 +55,11 @@ async def cmd_start(message: types.Message, state: FSMContext):
         "Доступні команди:\n"
         "/cart - Переглянути кошик\n"
         "/clear_cart - Очистити кошик\n"
-        "/checkout - Оформити замовлення\n"
-        "/admin - Панель адміністратора"
+        "/checkout - Оформити замовлення"
     )
+
+    if admin.is_admin(user_id):
+        welcome_text += "\n/admin - Панель адміністратора ⚙️"
 
     if WEB_APP_URL and WEB_APP_URL.startswith("https://"):
         inline_kb = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -64,12 +68,12 @@ async def cmd_start(message: types.Message, state: FSMContext):
         reply_kb = types.ReplyKeyboardMarkup(keyboard=[
             [types.KeyboardButton(text="🍪 Відкрити Магазин", web_app=types.WebAppInfo(url=WEB_APP_URL))]
         ], resize_keyboard=True)
-        
-        storage.save_message(message.from_user.id, "assistant", welcome_text)
+
+        storage.save_message(user_id, "assistant", welcome_text)
         await message.answer(welcome_text, reply_markup=inline_kb)
         await message.answer("Або скористайтеся кнопкою внизу екрану 👇", reply_markup=reply_kb)
     else:
-        storage.save_message(message.from_user.id, "assistant", welcome_text)
+        storage.save_message(user_id, "assistant", welcome_text)
         await message.answer(welcome_text)
 
 
