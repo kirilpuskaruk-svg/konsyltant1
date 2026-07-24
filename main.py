@@ -209,7 +209,7 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
 
 async def main():
-    print("🤖 Бот Cookie Shop заповнений та готовий до запуску...")
+    print("Cookie Shop Bot starting polling...")
     await dp.start_polling(bot)
 
 
