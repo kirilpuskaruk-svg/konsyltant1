@@ -66,23 +66,23 @@ def get_main_admin_keyboard():
 
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message, state: FSMContext):
-    await state.clear()
-    user_id = message.from_user.id
-    if not is_admin(user_id):
-        await message.answer(
-            f"⛔ **У вас немає прав доступу до адмін-панелі.**\n\n"
-            f"📍 Ваш Telegram ID: `{user_id}`\n\n"
-            f"Щоб отримати доступ адміністратора, додайте рядок із цим ID у файл `.env`:\n"
-            f"`ADMIN_ID={user_id}`",
-            parse_mode="Markdown"
-        )
-        return
+    try:
+        await state.clear()
+        user_id = message.from_user.id
+        if not is_admin(user_id):
+            await message.answer(
+                f"⛔ У вас немає прав доступу до адмін-панелі.\n\n📍 Ваш Telegram ID: {user_id}\n\nЩоб отримати доступ, додайте цей ID у налаштування ADMIN_ID!"
+            )
+            return
 
-    welcome_text = (
-        "⚙️ **Панель Адміністратора Cookie Shop** 🍪\n\n"
-        "Оберіть необхідний розділ для керування магазином:"
-    )
-    await message.answer(welcome_text, reply_markup=get_main_admin_keyboard(), parse_mode="Markdown")
+        welcome_text = (
+            "⚙️ Панель Адміністратора Store 🛍️\n\n"
+            "Оберіть необхідний розділ для керування магазином:"
+        )
+        await message.answer(welcome_text, reply_markup=get_main_admin_keyboard())
+    except Exception as e:
+        print(f"[cmd_admin Error]: {e}")
+        await message.answer("⚙️ Панель Адміністратора Store 🛍️", reply_markup=get_main_admin_keyboard())
 
 
 @router.callback_query(F.data == "admin_menu")
