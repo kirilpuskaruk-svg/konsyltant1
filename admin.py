@@ -66,8 +66,15 @@ def get_main_admin_keyboard():
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message, state: FSMContext):
     await state.clear()
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ У вас немає прав доступу до адмін-панелі.")
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer(
+            f"⛔ **У вас немає прав доступу до адмін-панелі.**\n\n"
+            f"📍 Ваш Telegram ID: `{user_id}`\n\n"
+            f"Щоб отримати доступ адміністратора, додайте рядок із цим ID у файл `.env`:\n"
+            f"`ADMIN_ID={user_id}`",
+            parse_mode="Markdown"
+        )
         return
 
     welcome_text = (

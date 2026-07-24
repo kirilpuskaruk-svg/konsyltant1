@@ -177,7 +177,10 @@ async def process_address(message: types.Message, state: FSMContext):
     await message.answer(order_success_msg, parse_mode="Markdown")
 
 
-# Головний обробник текстових повідомлень через Киріла (ai_manager)
+import bonuses
+import web_server
+
+
 @dp.message(F.text)
 async def handle_user_text(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
@@ -190,19 +193,32 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     # 1. Зберігаємо повідомлення користувача
     storage.save_message(user_id, "user", user_text)
 
-    # 2. Отримуємо історію та список товарів
+    # 2. Отримуємо повний контекст користувача
     history = storage.get_user_history(user_id)
     products = load_products()
+    cart_info = cart.get_cart_total(user_id, products)
+    user_b_val = bonuses.get_user_bonuses(user_id)
+    user_orders = storage.get_orders(user_id=user_id)
+    promos = web_server.load_promos()
 
-    # 3. Викликаємо AI-менеджера Киріла
-    ai_response = ai_manager.generate_reply(user_text, history, products)
+    # 3. Викликаємо Сверхрозумного AI-менеджера
+    ai_response = ai_manager.generate_reply(
+        message=user_text,
+        history=history,
+        products=products,
+        user_cart=cart_info["items"],
+        user_bonuses=user_b_val,
+        user_orders=user_orders,
+        promos=promos
+    )
 
     reply_text = ai_response.get("reply", "")
     action = ai_response.get("action", "question")
     product_id = ai_response.get("product_id")
     quantity = ai_response.get("quantity") or 1
+    promo_code = ai_response.get("promo_code")
 
-    # 4. Обробка дій (action)
+    # 4. Обробка розширених дій (actions)
     if action == "add_to_cart" and product_id:
         success, cart_msg = cart.add_to_cart(user_id, product_id, quantity, products)
         if not success:
@@ -210,6 +226,15 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
     elif action == "remove_from_cart" and product_id:
         cart.remove_from_cart(user_id, product_id)
+
+    elif action == "show_cart":
+        storage.save_message(user_id, "assistant", reply_text)
+        await message.answer(reply_text)
+        await cmd_cart(message)
+        return
+
+    elif action == "clear_cart":
+        cart.clear_cart(user_id)
 
     elif action == "checkout":
         user_cart = cart.get_cart(user_id)
@@ -222,12 +247,25 @@ async def handle_user_text(message: types.Message, state: FSMContext):
             await message.answer("Давайте оформимо замовлення! 📝 Введіть ваші **ПІБ / Ім'я**:")
             return
 
+    elif action == "apply_promo" and promo_code:
+        p_code = promo_code.strip().upper()
+        if p_code in promos and promos[p_code].get("active", True):
+            pct = promos[p_code].get("discount_percent", 0)
+            reply_text += f"\n\n🎉 Промокод `{p_code}` дійсний! Ви отримуєте знижку **{pct}%** при оформленні!"
+
+    elif action == "check_status":
+        if user_orders:
+            last_order = user_orders[-1]
+            st_map = {"new": "🆕 Нове", "processing": "⏳ В обробці", "completed": "✅ Виконано", "cancelled": "❌ Скасовано"}
+            st_str = st_map.get(last_order.get("status"), last_order.get("status"))
+            reply_text += f"\n\n📦 Замовлення #{last_order.get('order_id')}: статус **{st_str}** (сума: {last_order.get('total_price')} грн)."
+
     elif action == "manager":
         reply_text += "\n\n🔔 (Повідомлення передано менеджеру-людині)."
 
     # Зберігаємо та відправляємо відповідь бота
     storage.save_message(user_id, "assistant", reply_text)
-    await message.answer(reply_text)
+    await message.answer(reply_text, parse_mode="Markdown")
 
 
 async def main():

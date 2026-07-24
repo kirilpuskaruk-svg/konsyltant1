@@ -13,46 +13,62 @@ def get_client():
         raise ValueError("GEMINI_API_KEY is not set in environment variables.")
     return genai.Client(api_key=GEMINI_API_KEY)
 
-def generate_reply(message: str, history: list, products: list) -> dict:
+
+def generate_reply(
+    message: str,
+    history: list,
+    products: list,
+    user_cart: list = None,
+    user_bonuses: float = 0.0,
+    user_orders: list = None,
+    promos: dict = None
+) -> dict:
     """
-    Генерує відповідь клієнту через Gemini API.
-
-    Параметри:
-    - message (str): Нове повідомлення клієнта.
-    - history (list): Історія діалогу [{"role": "user"/"assistant", "text": "..."}, ...]
-    - products (list): Список товарів з products.json
-
-    Повертає dict в форматі:
-    {
-      "reply": "Текст відповіді клієнту...",
-      "action": "question" | "add_to_cart" | "remove_from_cart" | "checkout" | "manager",
-      "product_id": int або None,
-      "quantity": int або None
-    }
+    Генерує інтелектуальну відповідь клієнту через Gemini API з урахуванням повного контексту.
     """
     client = get_client()
 
-    products_str = json.dumps(products, ensure_ascii=False, indent=2)
+    products_str = json.dumps(products or [], ensure_ascii=False, indent=2)
+    cart_str = json.dumps(user_cart or [], ensure_ascii=False, indent=2)
+    orders_str = json.dumps(user_orders or [], ensure_ascii=False, indent=2)
+    promos_str = json.dumps(promos or {}, ensure_ascii=False, indent=2)
 
     system_instruction = f"""
-Ти — ввічливий, приязний та розумний AI-менеджер інтернет-магазину печива "Cookie Shop 🍪".
+Ти — інтелектуальний, турботливий та вишуканий Шеф-Кондитер і Головний AI-Менеджер крафтового інтернет-магазину печива "Cookie Shop 🍪".
 
-ОСНОВНІ ПРАВИЛА:
-1. Категорично НЕ ВИГАДУЙ товарів, цін, складу або наявності! Всі товари беруться ВИКЛЮЧНО зі списку доступних продуктів.
-2. Радити тільки те печиво, яке є у наданому списку (products.json). Якщо товару немає в наявності (in_stock = false), попередь про це клієнта.
-3. Відповідай коротко, дружньо, тією ж мовою, якою пише клієнт (за замовчуванням — українською).
-4. Якщо незрозуміло, який саме товар потрібен клієнту або яка кількість — ставай уточнювальне питання ("reply") і зазначай action "question".
-5. Якщо запит НЕ стосується печива, асортименту або доставки печива (наприклад, питання про політику, програмування, сторонні товари чи незрозумілий спам) — встанови action: "manager".
-6. Повертай БУДЬ-ЯКУ відповідь СУВОРО у форматі JSON з наступними полями:
-   - "reply": Текстова відповідь клієнту.
-   - "action": Одне з п'яти значень:
-       * "question" — якщо клієнт просто щось запитує, уточнює або ти ставиш уточнювальне питання.
-       * "add_to_cart" — якщо клієнт висловив бажання додати певний товар у кошик.
-       * "remove_from_cart" — якщо клієнт хоче прибрати товар з кошика.
-       * "checkout" — якщо клієнт висловив бажання оформити/завершити замовлення (наприклад, "оформлюємо", "хочу замовити", "купити вміст кошика").
-       * "manager" — якщо бот не знає відповіді, запит не по темі або потрібна допомога людини.
-   - "product_id": ID товару (ціле число), до якого застосовується action "add_to_cart" чи "remove_from_cart". Якщо action інший або product_id невизначений — null.
-   - "quantity": Кількість товару (ціле число), яку бажає додати/видалити клієнт. За замовчуванням 1, якщо не вказано інше. Якщо action інший — null.
+ТВОЯ МІСІЯ:
+Забезпечувати преміальний сервіс, допомагати обрати найсмачніше печиво, рекомендувати смакові поєднання (до еспресо, капучино, лате, зеленого/чорного чаю), допомагати керувати кошиком, перевіряти замовлення та створювати найприємніші враження.
+
+ОБОВ'ЯЗКОВІ ПРАВИЛА:
+1. Категорично НЕ ВИГАДУЙ товарів, цін або наявності! Використовуй ВИКЛЮЧНО наданий список доступних продуктів (products.json). Якщо товару немає в наявності (in_stock = false), попередь про це клієнта.
+2. Відповідай дружньо, тепло, вишукано та стисло, тією ж мовою, якою пише клієнт (за замовчуванням — українською).
+3. Використовуй контекст користувача (кошик, бонуси, замовлення, промокоди) для надання точних та персоналізованих відповідей.
+4. Якщо запит НЕ стосується печива, кави/чаю, асортименту, доставки чи замовлень (наприклад, політика, програмування, сторонні товари) — встанови action: "manager".
+5. Повертай відповідь СУВОРО у форматі JSON з наступною структурою:
+   {{
+     "reply": "Текст текстової відповіді клієнту...",
+     "action": "question" | "add_to_cart" | "remove_from_cart" | "show_cart" | "clear_cart" | "checkout" | "apply_promo" | "check_status" | "manager",
+     "product_id": int або null,
+     "quantity": int або null,
+     "promo_code": str або null
+   }}
+
+ЗНАЧЕННЯ ДІЙ (action):
+- "question" — відповідь на питання, гастрономічна порада або уточнення.
+- "add_to_cart" — клієнт хоче додати товар у кошик. Вкажи product_id та quantity (за замовчуванням 1).
+- "remove_from_cart" — клієнт хоче видалити товар з кошика. Вкажи product_id.
+- "show_cart" — клієнт запитує про вміст свого кошика чи загальну суму.
+- "clear_cart" — клієнт висловив бажання очистити свій кошик повністю.
+- "checkout" — клієнт хоче оформити або завершити замовлення ("оформлюємо", "купити", "замовити все").
+- "apply_promo" — клієнт назвав або хоче застосувати промокод (вкажи код у "promo_code").
+- "check_status" — клієнт запитує про статус замовлення.
+- "manager" — складне нестандартне питання або недоречний запит.
+
+АКТУАЛЬНИЙ КОНТЕКСТ КОРИСТУВАЧА:
+- 🛒 Поточний кошик користувача: {cart_str}
+- 🏆 Накопичені кешбек-бонуси користувача: {user_bonuses} грн
+- 📦 Минулі замовлення користувача: {orders_str}
+- 🏷️ Активні промокоди магазину: {promos_str}
 
 СПИСОК ДОСТУПНИХ ТОВАРІВ (products.json):
 {products_str}
@@ -61,14 +77,13 @@ def generate_reply(message: str, history: list, products: list) -> dict:
     contents = []
     
     # Формування історії діалогу
-    for item in history:
+    for item in history[-10:]:
         role = item.get("role")
         text = item.get("text", "")
-        # Перетворення ролей на зрозумілі для Gemini
         genai_role = "user" if role == "user" else "model"
         contents.append(types.Content(role=genai_role, parts=[types.Part.from_text(text=text)]))
 
-    # Додавання поточного повідомлення
+    # Поточне повідомлення
     contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
 
     try:
@@ -85,20 +100,20 @@ def generate_reply(message: str, history: list, products: list) -> dict:
         response_text = response.text.strip()
         parsed_json = json.loads(response_text)
 
-        # Валідація структури JSON
         return {
             "reply": str(parsed_json.get("reply", "Дякуємо за звернення!")),
             "action": parsed_json.get("action", "question"),
             "product_id": parsed_json.get("product_id"),
-            "quantity": parsed_json.get("quantity")
+            "quantity": parsed_json.get("quantity"),
+            "promo_code": parsed_json.get("promo_code")
         }
 
     except Exception as e:
         print(f"[AI Manager Error]: {e}")
-        # У разі помилки виклику або парсингу повертаємо безпечний фолбек з передачею менеджеру
         return {
-            "reply": "Вибачте, виникла невеличка технічна запинка. Передаю ваше запит нашому менеджеру, він зв'яжеться з вами найближчим часом! 🍪",
+            "reply": "Вибачте, виникла невеличка технічна запинка. Передаю ваш запит нашому менеджеру, він зв'яжеться з вами найближчим часом! 🍪",
             "action": "manager",
             "product_id": None,
-            "quantity": None
+            "quantity": None,
+            "promo_code": None
         }
