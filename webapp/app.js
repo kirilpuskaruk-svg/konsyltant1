@@ -33,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     catContainer.addEventListener('mousedown', (e) => {
       isDown = true;
-      catContainer.classList.add('active-grab');
       startX = e.pageX - catContainer.offsetLeft;
       scrollLeft = catContainer.scrollLeft;
     });
@@ -50,18 +49,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     catContainer.addEventListener('mousemove', (e) => {
       if (!isDown) return;
-      e.preventDefault();
       const x = e.pageX - catContainer.offsetLeft;
       const walk = (x - startX) * 2;
-      catContainer.scrollLeft = scrollLeft - walk;
+      if (Math.abs(walk) > 5) {
+        catContainer.classList.add('active-grab');
+        catContainer.scrollLeft = scrollLeft - walk;
+      }
     });
 
     catContainer.addEventListener('wheel', (e) => {
       if (e.deltaY !== 0) {
-        e.preventDefault();
         catContainer.scrollLeft += e.deltaY;
       }
-    });
+    }, { passive: true });
+
+    initCategoryButtons(catContainer);
   }
 
   // Modal open / close
@@ -106,6 +108,20 @@ async function fetchUserBonuses() {
   }
 }
 
+function initCategoryButtons(container) {
+  if (!container) return;
+  container.querySelectorAll(".cat-chip").forEach(chip => {
+    chip.onclick = (e) => {
+      e.stopPropagation();
+      container.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
+      const target = e.currentTarget;
+      target.classList.add("active");
+      activeCategory = target.dataset.cat || "all";
+      filterAndRenderProducts();
+    };
+  });
+}
+
 async function fetchCategories() {
   try {
     const res = await fetch('/api/categories');
@@ -127,15 +143,7 @@ async function fetchCategories() {
       container.appendChild(btn);
     });
 
-    container.querySelectorAll(".cat-chip").forEach(chip => {
-      chip.addEventListener("click", (e) => {
-        container.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
-        const target = e.currentTarget;
-        target.classList.add("active");
-        activeCategory = target.dataset.cat;
-        filterAndRenderProducts();
-      });
-    });
+    initCategoryButtons(container);
   } catch (err) {
     console.error("Error fetching categories:", err);
   }
