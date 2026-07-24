@@ -15,30 +15,89 @@ def _load_products():
     return []
 
 
+def _save_products(products):
+    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(products, f, ensure_ascii=False, indent=2)
+
+
+def toggle_product_stock(product_id):
+    """
+    Toggles the in_stock status of a product by ID.
+    Returns updated product dict or None.
+    """
+    products = _load_products()
+    updated = None
+    for p in products:
+        if p.get("id") == product_id or p.get("product_id") == product_id:
+            p["in_stock"] = not p.get("in_stock", True)
+            updated = p
+            break
+    if updated:
+        _save_products(products)
+    return updated
+
+
+def update_product_price(product_id, new_price):
+    """
+    Updates price of a product by ID.
+    """
+    products = _load_products()
+    updated = None
+    for p in products:
+        if p.get("id") == product_id or p.get("product_id") == product_id:
+            p["price"] = float(new_price)
+            updated = p
+            break
+    if updated:
+        _save_products(products)
+    return updated
+
+
+def add_product(name, description, price, in_stock=True):
+    """
+    Adds a new product to products.json.
+    """
+    products = _load_products()
+    existing_ids = [p.get("id", 0) for p in products if isinstance(p.get("id"), int)]
+    new_id = max(existing_ids, default=0) + 1
+
+    new_prod = {
+        "id": new_id,
+        "name": name,
+        "description": description,
+        "price": float(price),
+        "in_stock": in_stock
+    }
+    products.append(new_prod)
+    _save_products(products)
+    return new_prod
+
+
+def delete_product(product_id):
+    """
+    Deletes a product by ID from products.json.
+    """
+    products = _load_products()
+    new_products = [p for p in products if p.get("id") != product_id and p.get("product_id") != product_id]
+    if len(new_products) < len(products):
+        _save_products(new_products)
+        return True
+    return False
+
+
 def get_cart(user_id):
-    """
-    Returns list of cart items for user_id.
-    Example: [{"product_id": 1, "quantity": 2}]
-    """
     carts = storage.get_raw_carts()
     user_str = str(user_id)
     return carts.get(user_str, [])
 
 
 def add_to_cart(user_id, product_id, quantity=1, products=None):
-    """
-    Adds a product to the user's cart.
-    Checks if product exists in database and is in stock.
-    Increments quantity if already in cart.
-    Returns (bool, str) status tuple or updated cart list.
-    """
     if quantity <= 0:
         return False, "Кількість повинна бути більшою за 0."
 
     if products is None:
         products = _load_products()
 
-    # Find product in list
     product = None
     if isinstance(products, list):
         for p in products:
@@ -51,8 +110,6 @@ def add_to_cart(user_id, product_id, quantity=1, products=None):
     if not product:
         return False, "Товар не знайдено в базі."
 
-    # Check stock availability
-    # Checks either in_stock boolean or stock count > 0
     in_stock = product.get("in_stock", True)
     stock_count = product.get("stock", None)
     if in_stock is False or (stock_count is not None and stock_count <= 0):
@@ -62,7 +119,6 @@ def add_to_cart(user_id, product_id, quantity=1, products=None):
     user_str = str(user_id)
     user_cart = carts.get(user_str, [])
 
-    # Check if item is already in user's cart
     item_found = False
     for item in user_cart:
         if item.get("product_id") == product_id:
@@ -82,9 +138,6 @@ def add_to_cart(user_id, product_id, quantity=1, products=None):
 
 
 def remove_from_cart(user_id, product_id):
-    """
-    Removes a product completely from the user's cart.
-    """
     carts = storage.get_raw_carts()
     user_str = str(user_id)
     user_cart = carts.get(user_str, [])
@@ -97,26 +150,9 @@ def remove_from_cart(user_id, product_id):
 
 
 def get_cart_total(user_id, products=None):
-    """
-    Calculates cart details and total price for user_id.
-    Returns dict:
-    {
-       "items": [
-           {
-               "product_id": 1,
-               "name": "Шоколадне печиво",
-               "price": 120,
-               "quantity": 2,
-               "subtotal": 240
-           }
-       ],
-       "total_price": 240
-    }
-    """
     if products is None:
         products = _load_products()
 
-    # Map products by ID for fast lookup
     products_map = {}
     if isinstance(products, list):
         for p in products:
@@ -155,9 +191,6 @@ def get_cart_total(user_id, products=None):
 
 
 def clear_cart(user_id):
-    """
-    Empties the cart for user_id.
-    """
     carts = storage.get_raw_carts()
     user_str = str(user_id)
     carts[user_str] = []

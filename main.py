@@ -12,6 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import ai_manager
 import cart
 import storage
+import admin
 
 load_dotenv()
 
@@ -23,6 +24,7 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
+dp.include_router(admin.router)
 
 
 class CheckoutState(StatesGroup):
