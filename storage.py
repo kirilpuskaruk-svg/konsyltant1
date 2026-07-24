@@ -106,6 +106,32 @@ def export_orders_csv(filepath="orders_export.csv"):
     return filepath
 
 
+def export_orders_txt(filepath="orders_export.txt"):
+    """
+    Exports all orders to a formatted TXT file.
+    """
+    orders = _read_json(ORDERS_FILE, [])
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write("=== ЗВІТ ЗАМОВЛЕНЬ COOKIE SHOP ===\n\n")
+        if not orders:
+            f.write("Замовлень не знайдено.\n")
+        for o in orders:
+            f.write(f"Замовлення #{o.get('order_id')}\n")
+            f.write(f"Клієнт: {o.get('name')} (User ID: {o.get('user_id')})\n")
+            f.write(f"Телефон: {o.get('phone')}\n")
+            f.write(f"Адреса: {o.get('address')}\n")
+            f.write(f"Статус: {o.get('status')}\n")
+            f.write("Товари:\n")
+            for item in o.get("items", []):
+                p_name = item.get("name") or f"Печиво #{item.get('product_id')}"
+                qty = item.get("quantity", 1)
+                price = item.get("price", 0)
+                f.write(f"  - {p_name} x{qty} ({price * qty} грн)\n")
+            f.write(f"Загальна сума: {o.get('total_price')} грн\n")
+            f.write("-" * 40 + "\n\n")
+    return filepath
+
+
 def get_analytics_summary():
     """
     Calculates shop analytics summary.

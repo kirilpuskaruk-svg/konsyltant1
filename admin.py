@@ -53,6 +53,7 @@ def get_main_admin_keyboard():
             InlineKeyboardButton(text="📢 Масова розсилка", callback_data="admin_broadcast")
         ],
         [
+            InlineKeyboardButton(text="📄 Експорт TXT", callback_data="admin_export_txt"),
             InlineKeyboardButton(text="📁 Експорт CSV", callback_data="admin_export_csv")
         ]
     ])
@@ -478,7 +479,19 @@ async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot)
     )
 
 
-# ==================== 5. ЕКСПОРТ CSV ====================
+# ==================== 5. ЕКСПОРТ (TXT / CSV) ====================
+
+@router.callback_query(F.data == "admin_export_txt")
+async def cb_export_txt(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    txt_file = storage.export_orders_txt()
+    document = FSInputFile(txt_file, filename="orders_export.txt")
+
+    await callback.message.answer_document(document, caption="📄 Ось експорт усіх замовлень у TXT файлі!")
+    await callback.answer()
+
 
 @router.callback_query(F.data == "admin_export_csv")
 async def cb_export_csv(callback: types.CallbackQuery):

@@ -9,7 +9,7 @@ class TestAdminPanel(unittest.TestCase):
 
     def setUp(self):
         # Clean up files before test
-        for fname in [storage.ORDERS_FILE, storage.CARTS_FILE, storage.HISTORY_FILE, cart.PRODUCTS_FILE, "orders_export.csv"]:
+        for fname in [storage.ORDERS_FILE, storage.CARTS_FILE, storage.HISTORY_FILE, cart.PRODUCTS_FILE, "orders_export.csv", "orders_export.txt"]:
             if os.path.exists(fname):
                 os.remove(fname)
 
@@ -21,7 +21,7 @@ class TestAdminPanel(unittest.TestCase):
             json.dump(self.sample_products, f, ensure_ascii=False, indent=2)
 
     def tearDown(self):
-        for fname in [storage.ORDERS_FILE, storage.CARTS_FILE, storage.HISTORY_FILE, cart.PRODUCTS_FILE, "orders_export.csv"]:
+        for fname in [storage.ORDERS_FILE, storage.CARTS_FILE, storage.HISTORY_FILE, cart.PRODUCTS_FILE, "orders_export.csv", "orders_export.txt"]:
             if os.path.exists(fname):
                 os.remove(fname)
 
@@ -70,6 +70,9 @@ class TestAdminPanel(unittest.TestCase):
 
         csv_file = storage.export_orders_csv("orders_export.csv")
         self.assertTrue(os.path.exists(csv_file))
+
+        txt_file = storage.export_orders_txt("orders_export.txt")
+        self.assertTrue(os.path.exists(txt_file))
 
     def test_product_management(self):
         # Toggle stock
