@@ -379,6 +379,7 @@ body {
   height: 100vh;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -392,16 +393,17 @@ body {
   pointer-events: none;
 }
 
-.modal-content {
+.modal-card, .modal-content {
   background: var(--bg-card);
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
   border-radius: 24px 24px 0 0;
-  padding: 20px;
+  padding: 24px 20px;
   overflow-y: auto;
   border-top: 1px solid var(--border-color);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-header {
@@ -416,15 +418,24 @@ body {
   font-weight: 700;
 }
 
-.btn-close {
+.close-modal, .btn-close {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: var(--text-muted);
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 20px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-modal:hover, .btn-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 .form-group {
@@ -433,7 +444,7 @@ body {
 
 .form-group label {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 6px;
 }
@@ -448,9 +459,14 @@ body {
   font-size: 14px;
   outline: none;
   user-select: text;
+  min-height: 44px;
 }
 
-.btn-submit {
+.form-group input:focus {
+  border-color: var(--accent-color);
+}
+
+.btn-submit, .btn-confirm-order, .btn-submit-offer {
   width: 100%;
   padding: 14px;
   background: var(--accent-gradient);
@@ -460,12 +476,18 @@ body {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 12px;
   min-height: 48px;
+  box-shadow: 0 4px 15px rgba(255, 159, 28, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-submit:active, .btn-confirm-order:active, .btn-submit-offer:active {
+  transform: scale(0.98);
 }
 
 /* Responsive Media Queries */
-@media (max-width: 375px) {
+@media (max-width: 380px) {
   .products-grid {
     grid-template-columns: 1fr;
   }
@@ -474,6 +496,9 @@ body {
   }
   .product-price {
     font-size: 16px;
+  }
+  .app-header {
+    flex-wrap: wrap;
   }
 }
 
@@ -489,7 +514,7 @@ body {
   .modal-overlay {
     align-items: center;
   }
-  .modal-content {
+  .modal-card, .modal-content {
     border-radius: 24px;
     max-height: 85vh;
   }
