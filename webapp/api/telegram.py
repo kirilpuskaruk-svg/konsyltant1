@@ -14,14 +14,22 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(parent_dir, ".env"))
 
 import aiogram
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.types import Update
 
-try:
-    from main import bot, dp
-except Exception as err:
-    print(f"[Import main error]: {err}")
-    bot, dp = None, None
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+from main import dp
+
+
+async def process_telegram_update(update_data):
+    # Create fresh bot instance per request to avoid closed event loop session reuse
+    bot = Bot(token=BOT_TOKEN)
+    try:
+        update = Update.model_validate(update_data, context={"bot": bot})
+        await dp.feed_update(bot, update)
+    finally:
+        await bot.session.close()
 
 
 class handler(BaseHTTPRequestHandler):
@@ -30,16 +38,13 @@ class handler(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         
         try:
-            if not bot or not dp:
-                raise ValueError("Bot or Dispatcher failed to initialize.")
-
             update_data = json.loads(post_data.decode('utf-8'))
-            tg_update = Update.model_validate(update_data, context={"bot": bot})
-            
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop.run_until_complete(dp.feed_update(bot, tg_update))
-            loop.close()
+            try:
+                loop.run_until_complete(process_telegram_update(update_data))
+            finally:
+                loop.close()
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
