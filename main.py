@@ -47,10 +47,10 @@ WEB_APP_URL = os.getenv("WEB_APP_URL", "http://localhost:8080")
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     welcome_text = (
-        "Вітаю у крафтовому магазині печива **Cookie Shop**! 🍪✨\n\n"
+        "Вітаю у крафтовому магазині печива Cookie Shop! 🍪✨\n\n"
         "Я ваш особистий AI-консультант. За запитом я пораджу найсмачніше печиво, "
         "допоможу з вибором або відповім на будь-які питання!\n\n"
-        "📱 **Натисніть кнопку нижче, щоб відкрити інтерактивний Mini App магазин з фотографіями, знижками та кошиком!** 🛍️\n\n"
+        "📱 Натисніть кнопку нижче, щоб відкрити інтерактивний Mini App магазин з фотографіями, знижками та кошиком! 🛍️\n\n"
         "Доступні команди:\n"
         "/cart - Переглянути кошик\n"
         "/clear_cart - Очистити кошик\n"
@@ -67,7 +67,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     ], resize_keyboard=True)
 
     storage.save_message(message.from_user.id, "assistant", welcome_text)
-    await message.answer(welcome_text, reply_markup=inline_kb, parse_mode="Markdown")
+    await message.answer(welcome_text, reply_markup=inline_kb)
     await message.answer("Або скористайтеся кнопкою внизу екрану 👇", reply_markup=reply_kb)
 
 
