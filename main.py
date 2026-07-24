@@ -260,6 +260,35 @@ async def handle_user_text(message: types.Message, state: FSMContext):
             st_str = st_map.get(last_order.get("status"), last_order.get("status"))
             reply_text += f"\n\n📦 Замовлення #{last_order.get('order_id')}: статус **{st_str}** (сума: {last_order.get('total_price')} грн)."
 
+    elif action == "make_offer":
+        offered_price = ai_response.get("offered_price")
+        admin_id = os.getenv("ADMIN_ID")
+        if admin_id and product_id and offered_price:
+            p_obj = next((p for p in products if p["id"] == product_id), None)
+            p_title = p_obj["name"] if p_obj else f"Товар #{product_id}"
+            p_price = p_obj["price"] if p_obj else 0.0
+
+            kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    types.InlineKeyboardButton(text=f"✅ Прийняти ({offered_price} грн)", callback_data=f"offer_acc:{user_id}:{product_id}:{offered_price}"),
+                    types.InlineKeyboardButton(text="❌ Відхилити", callback_data=f"offer_rej:{user_id}:{product_id}:{offered_price}")
+                ]
+            ])
+            try:
+                await bot.send_message(
+                    chat_id=int(admin_id),
+                    text=f"📥 **Нова пропозиція ціни (Торг)!**\n\n"
+                         f"👤 Покупець ID: `{user_id}` (@{message.from_user.username or 'немає'})\n"
+                         f"🛍️ Товар: **{p_title}**\n"
+                         f"🏷️ Початкова ціна: **{p_price} грн**\n"
+                         f"💰 Запропонована ціна: **{offered_price} грн**",
+                    reply_markup=kb,
+                    parse_mode="Markdown"
+                )
+                reply_text += f"\n\n🤝 Дякуємо! Вашу пропозицію **{offered_price} грн** передано продавцю. Бот сповістить вас одразу після рішення!"
+            except Exception as e:
+                print(f"[Send Offer Error]: {e}")
+
     elif action == "manager":
         reply_text += "\n\n🔔 (Повідомлення передано менеджеру-людині)."
 

@@ -10,6 +10,7 @@ let appliedPromo = null;
 let discountPercent = 0;
 let userBonuses = 0;
 let activeCategory = "all";
+let currentOfferProduct = null;
 
 const user_id = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : "123456";
 const user_name = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? (tg.initDataUnsafe.user.first_name + ' ' + (tg.initDataUnsafe.user.last_name || '')).trim() : "Клієнт";
@@ -35,6 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Modal open / close
   document.getElementById("btnOpenCheckout").addEventListener("click", openCheckoutModal);
   document.getElementById("btnCloseModal").addEventListener("click", closeCheckoutModal);
+
+  // Offer modal close
+  document.getElementById("btnCloseOfferModal").addEventListener("click", closeOfferModal);
+  document.getElementById("btnSubmitOffer").addEventListener("click", submitOffer);
 
   // Promo code
   document.getElementById("btnApplyPromo").addEventListener("click", applyPromoCode);
@@ -82,26 +87,42 @@ function filterAndRenderProducts() {
   });
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #94a3b8;">Печива не знайдено 🍪</div>`;
+    grid.innerHTML = `<div class="empty-products"><p>На жаль, товарів не знайдено 🛍️</p></div>`;
     return;
   }
 
   filtered.forEach(p => {
     const card = document.createElement("div");
     card.className = "product-card";
-    const imgUrl = p.image_url || "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80";
+
+    const qtyInCart = cart[p.id] || 0;
+    const conditionBadge = p.condition ? `<span class="condition-badge">✨ ${p.condition}</span>` : "";
+    const videoBtn = p.video_url ? `<a href="${p.video_url}" target="_blank" class="btn-video-link">🎥 Огляд</a>` : "";
 
     card.innerHTML = `
       <div class="product-img-wrapper">
-        <img src="${imgUrl}" alt="${p.name}" />
-        <span class="product-rating">⭐ ${p.rating || '4.9'}</span>
+        <img src="${p.image_url}" alt="${p.name}" class="product-img" loading="lazy">
+        <div class="rating-chip">★ ${p.rating || 5.0}</div>
+        ${conditionBadge}
       </div>
-      <div class="product-details">
-        <h3 class="product-name">${p.name}</h3>
+      <div class="product-info">
+        <h3 class="product-title">${p.name}</h3>
         <p class="product-desc">${p.description}</p>
-        <div class="product-footer">
-          <span class="product-price">${p.price} ₴</span>
-          <button class="btn-add-cart" onclick="addToCart(${p.id})">+ Додати</button>
+        <div class="product-actions-bar">
+          <div class="price-tag">${p.price} ₴</div>
+          ${videoBtn}
+        </div>
+        <div class="card-buttons-row">
+          <button class="btn-offer" onclick="openOfferModal(${p.id})">🤝 Торг</button>
+          ${qtyInCart === 0 ? `
+            <button class="btn-add-cart" onclick="addToCart(${p.id})">+ Додати</button>
+          ` : `
+            <div class="qty-controls">
+              <button onclick="changeQty(${p.id}, -1)">-</button>
+              <span>${qtyInCart}</span>
+              <button onclick="changeQty(${p.id}, 1)">+</button>
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -111,46 +132,92 @@ function filterAndRenderProducts() {
 
 function addToCart(productId) {
   cart[productId] = (cart[productId] || 0) + 1;
-  updateCartBar();
-  if (tg && tg.HapticFeedback) {
-    tg.HapticFeedback.impactOccurred('light');
-  }
+  updateCartUI();
+  filterAndRenderProducts();
 }
 
-function removeFromCart(productId) {
-  if (cart[productId]) {
-    cart[productId]--;
-    if (cart[productId] <= 0) {
-      delete cart[productId];
-    }
+function changeQty(productId, delta) {
+  if (!cart[productId]) return;
+  cart[productId] += delta;
+  if (cart[productId] <= 0) {
+    delete cart[productId];
   }
-  updateCartBar();
-  renderModalItems();
+  updateCartUI();
+  filterAndRenderProducts();
 }
 
-function updateCartBar() {
-  const totalCount = Object.values(cart).reduce((a, b) => a + b, 0);
+function updateCartUI() {
+  const floatingBar = document.getElementById("cartFloatingBar");
+  let totalCount = 0;
   let totalPrice = 0;
 
-  for (let pid in cart) {
-    const p = products.find(prod => prod.id == pid);
-    if (p) {
-      totalPrice += p.price * cart[pid];
+  for (let id in cart) {
+    const count = cart[id];
+    const product = products.find(p => p.id == id);
+    if (product) {
+      totalCount += count;
+      totalPrice += product.price * count;
     }
   }
 
-  const bar = document.getElementById("cartFloatingBar");
   if (totalCount > 0) {
-    bar.classList.remove("hidden");
-    document.getElementById("cartItemCount").innerText = `${totalCount} шт`;
-    document.getElementById("cartTotalPrice").innerText = `${totalPrice} ₴`;
+    floatingBar.classList.remove("hidden");
+    document.getElementById("cartItemCount").innerText = totalCount;
+    document.getElementById("cartTotalPrice").innerText = totalPrice + " ₴";
   } else {
-    bar.classList.add("hidden");
+    floatingBar.classList.add("hidden");
   }
 }
 
+// MAKE OFFER MODAL
+function openOfferModal(productId) {
+  currentOfferProduct = products.find(p => p.id == productId);
+  if (!currentOfferProduct) return;
+
+  document.getElementById("offerProductName").innerText = currentOfferProduct.name;
+  document.getElementById("offerOrigPrice").innerText = currentOfferProduct.price;
+  document.getElementById("offerPriceInput").value = "";
+  document.getElementById("offerStatusMsg").innerText = "";
+  document.getElementById("offerModal").classList.remove("hidden");
+}
+
+function closeOfferModal() {
+  document.getElementById("offerModal").classList.add("hidden");
+}
+
+async function submitOffer() {
+  const priceVal = parseFloat(document.getElementById("offerPriceInput").value);
+  if (!priceVal || priceVal <= 0) {
+    document.getElementById("offerStatusMsg").innerText = "⚠️ Введіть коректну ціну!";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/make_offer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user_id,
+        product_id: currentOfferProduct.id,
+        offered_price: priceVal
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById("offerStatusMsg").innerText = "🎉 Пропозицію надіслано продавцю!";
+      setTimeout(closeOfferModal, 1800);
+    } else {
+      document.getElementById("offerStatusMsg").innerText = "❌ Помилка: " + data.error;
+    }
+  } catch (err) {
+    document.getElementById("offerStatusMsg").innerText = "❌ Помилка з'єднання.";
+  }
+}
+
+// CHECKOUT MODAL
 function openCheckoutModal() {
-  renderModalItems();
+  renderModalCartItems();
+  recalculateTotals();
   document.getElementById("checkoutModal").classList.remove("hidden");
 }
 
@@ -158,156 +225,148 @@ function closeCheckoutModal() {
   document.getElementById("checkoutModal").classList.add("hidden");
 }
 
-function renderModalItems() {
+function renderModalCartItems() {
   const container = document.getElementById("modalCartItems");
   container.innerHTML = "";
 
-  let subtotal = 0;
+  for (let id in cart) {
+    const count = cart[id];
+    const product = products.find(p => p.id == id);
+    if (!product) continue;
 
-  for (let pid in cart) {
-    const p = products.find(prod => prod.id == pid);
-    if (!p) continue;
-    const qty = cart[pid];
-    const itemSubtotal = p.price * qty;
-    subtotal += itemSubtotal;
-
-    const div = document.createElement("div");
-    div.className = "modal-cart-item";
-    div.innerHTML = `
-      <div>
-        <strong>${p.name}</strong><br>
-        <span style="font-size:12px; color:#94a3b8">${p.price} ₴ x ${qty}</span>
+    const row = document.createElement("div");
+    row.className = "cart-item-row";
+    row.innerHTML = `
+      <img src="${product.image_url}" class="cart-item-thumb" />
+      <div class="cart-item-info">
+        <div class="cart-item-title">${product.name}</div>
+        <div class="cart-item-subtotal">${count} x ${product.price} ₴ = ${count * product.price} ₴</div>
       </div>
-      <div class="item-qty-controls">
-        <button class="btn-qty" onclick="removeFromCart(${p.id})">-</button>
-        <span>${qty}</span>
-        <button class="btn-qty" onclick="addToCart(${p.id})">+</button>
+      <div class="cart-item-qty">
+        <button onclick="changeQty(${product.id}, -1); renderModalCartItems(); recalculateTotals();">-</button>
+        <span>${count}</span>
+        <button onclick="changeQty(${product.id}, 1); renderModalCartItems(); recalculateTotals();">+</button>
       </div>
     `;
-    container.appendChild(div);
+    container.appendChild(row);
   }
-
-  calculateTotals(subtotal);
 }
 
-function calculateTotals(subtotal) {
+function recalculateTotals() {
+  let subtotal = 0;
+  for (let id in cart) {
+    const count = cart[id];
+    const product = products.find(p => p.id == id);
+    if (product) {
+      subtotal += product.price * count;
+    }
+  }
+
   let discount = 0;
   if (discountPercent > 0) {
-    discount = (subtotal * discountPercent) / 100;
+    discount += subtotal * (discountPercent / 100);
   }
 
-  let useBonus = document.getElementById("useBonusesCheckbox").checked;
-  let bonusDeduction = 0;
-  if (useBonus && userBonuses > 0) {
-    const remainingAfterDiscount = subtotal - discount;
-    bonusDeduction = Math.min(userBonuses, remainingAfterDiscount);
+  const useBonuses = document.getElementById("useBonusesCheckbox").checked;
+  if (useBonuses) {
+    discount += Math.min(subtotal - discount, userBonuses);
   }
 
-  const totalDiscount = discount + bonusDeduction;
-  const finalTotal = Math.max(0, subtotal - totalDiscount);
+  const finalTotal = Math.max(0, subtotal - discount);
 
-  document.getElementById("summarySubtotal").innerText = `${subtotal} ₴`;
-  const discRow = document.getElementById("discountRow");
-  if (totalDiscount > 0) {
-    discRow.style.display = "flex";
-    document.getElementById("summaryDiscount").innerText = `-${totalDiscount.toFixed(1)} ₴`;
+  document.getElementById("summarySubtotal").innerText = subtotal + " ₴";
+  document.getElementById("summaryFinalTotal").innerText = finalTotal.toFixed(1) + " ₴";
+
+  const discountRow = document.getElementById("discountRow");
+  if (discount > 0) {
+    discountRow.style.display = "flex";
+    document.getElementById("summaryDiscount").innerText = "- " + discount.toFixed(1) + " ₴";
   } else {
-    discRow.style.display = "none";
+    discountRow.style.display = "none";
   }
-  document.getElementById("summaryFinalTotal").innerText = `${finalTotal.toFixed(1)} ₴`;
 }
 
-document.getElementById("useBonusesCheckbox").addEventListener("change", () => {
-  renderModalItems();
-});
-
 async function applyPromoCode() {
-  const promoText = document.getElementById("promoInput").value.trim().toUpperCase();
-  const msgDiv = document.getElementById("promoMessage");
-
-  if (!promoText) return;
+  const code = document.getElementById("promoInput").value.trim();
+  const msgEl = document.getElementById("promoMessage");
+  if (!code) return;
 
   try {
     const res = await fetch("/api/validate_promo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ promo: promoText })
+      body: JSON.stringify({ code })
     });
     const data = await res.json();
-
     if (data.valid) {
       discountPercent = data.discount_percent;
-      appliedPromo = promoText;
-      msgDiv.style.color = "#2ec4b6";
-      msgDiv.innerText = `✅ Промокод застосовано! Знижка ${discountPercent}%`;
-      renderModalItems();
+      appliedPromo = code;
+      msgEl.className = "promo-message success";
+      msgEl.innerText = `🎉 Промокод активовано! Знижка ${discountPercent}%`;
+      recalculateTotals();
     } else {
-      msgDiv.style.color = "#e71d36";
-      msgDiv.innerText = `❌ Недійсний промокод`;
+      msgEl.className = "promo-message error";
+      msgEl.innerText = `❌ ${data.message}`;
     }
   } catch (err) {
-    console.error("Error applying promo:", err);
+    msgEl.className = "promo-message error";
+    msgEl.innerText = "❌ Помилка перевірки промокоду.";
   }
 }
 
 async function submitOrder(e) {
   e.preventDefault();
 
-  const items = [];
-  for (let pid in cart) {
-    const p = products.find(prod => prod.id == pid);
+  const btn = document.getElementById("btnConfirmOrder");
+  btn.disabled = true;
+  btn.innerText = "Обробка...";
+
+  const name = document.getElementById("orderName").value;
+  const phone = document.getElementById("orderPhone").value;
+  const address = document.getElementById("orderAddress").value;
+  const use_bonuses = document.getElementById("useBonusesCheckbox").checked;
+
+  let items = [];
+  for (let id in cart) {
+    const count = cart[id];
+    const p = products.find(prod => prod.id == id);
     if (p) {
-      items.push({
-        product_id: p.id,
-        name: p.name,
-        price: p.price,
-        quantity: cart[pid],
-        subtotal: p.price * cart[pid]
-      });
+      items.push({ product_id: p.id, name: p.name, quantity: count, price: p.price, subtotal: count * p.price });
     }
   }
-
-  if (items.length === 0) {
-    alert("Ваш кошик порожній!");
-    return;
-  }
-
-  const name = document.getElementById("orderName").value.trim();
-  const phone = document.getElementById("orderPhone").value.trim();
-  const address = document.getElementById("orderAddress").value.trim();
-  const useBonus = document.getElementById("useBonusesCheckbox").checked;
-
-  const orderPayload = {
-    user_id: user_id,
-    name: name,
-    phone: phone,
-    address: address,
-    items: items,
-    promo_code: appliedPromo,
-    use_bonuses: useBonus
-  };
 
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderPayload)
+      body: JSON.stringify({
+        user_id,
+        name,
+        phone,
+        address,
+        items,
+        promo_code: appliedPromo,
+        use_bonuses
+      })
     });
-    const result = await res.json();
-
-    if (result.success) {
+    const data = await res.json();
+    if (data.success) {
+      closeCheckoutModal();
+      cart = {};
+      updateCartUI();
       if (tg) {
-        tg.showAlert(`🎉 Дякуємо, ${name}! Замовлення #${result.order_id} успішно прийнято!`);
+        tg.showAlert(`🎉 Дякуємо! Замовлення №${data.order_id} успішно створено!`);
         tg.close();
       } else {
-        alert(`🎉 Дякуємо, ${name}! Замовлення #${result.order_id} успішно прийнято!`);
-        location.reload();
+        alert(`🎉 Замовлення №${data.order_id} успішно створено!`);
       }
     } else {
-      alert("Помилка при створенні замовлення.");
+      alert("❌ Помилка створення замовлення: " + data.error);
     }
   } catch (err) {
-    console.error("Error submitting order:", err);
-    alert("Помилка зв'язку з сервером.");
+    alert("❌ Помилка підключення до сервера.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Підтвердити замовлення 🎉";
   }
 }

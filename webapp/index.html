@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cookie Shop 🍪 Mini App</title>
+  <title>Collectibles & Goods Store 🛍️ Mini App</title>
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Google Fonts -->
@@ -17,29 +17,29 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-brand">
-        <span class="logo-emoji">🍪</span>
+        <span class="logo-emoji">🧸</span>
         <div>
-          <h1>Cookie Shop</h1>
-          <p class="subtitle">Крафтове печиво свіжої випічки</p>
+          <h1>Store & Collectibles</h1>
+          <p class="subtitle">Особисті речі, фігурки та колекційки</p>
         </div>
       </div>
-      <div class="bonus-badge" id="bonusBadge">
-        🏆 <span id="userBonusesCount">0</span> ₴
+      <div class="header-actions">
+        <div class="bonus-badge" id="bonusBadge">
+          🏆 <span id="userBonusesCount">0</span> ₴
+        </div>
       </div>
     </header>
 
     <!-- Search & Categories -->
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="🔍 Пошук печива..." />
+      <input type="text" id="searchInput" placeholder="🔍 Пошук речей та фігурок..." />
     </div>
 
     <div class="categories" id="categoriesContainer">
       <button class="cat-chip active" data-cat="all">Всі</button>
-      <button class="cat-chip" data-cat="Шоколадне">🍫 Шоколадне</button>
-      <button class="cat-chip" data-cat="Горіхове">🥜 Горіхове</button>
-      <button class="cat-chip" data-cat="Вівсяне">🌾 Вівсяне</button>
-      <button class="cat-chip" data-cat="Крафтове">✨ Крафтове</button>
-      <button class="cat-chip" data-cat="Фруктове">🍋 Фруктове</button>
+      <button class="cat-chip" data-cat="Фігурки">🧸 Фігурки</button>
+      <button class="cat-chip" data-cat="Одяг та Мерч">👕 Одяг та Мерч</button>
+      <button class="cat-chip" data-cat="Колекційне">✨ Колекційне</button>
     </div>
 
     <!-- Products Grid -->
@@ -72,7 +72,7 @@
 
           <!-- Promo Code Section -->
           <div class="promo-section">
-            <input type="text" id="promoInput" placeholder="Промокод (наприклад: COOKIE10)" />
+            <input type="text" id="promoInput" placeholder="Промокод (наприклад: YARIK20)" />
             <button class="btn-apply-promo" id="btnApplyPromo">Застосувати</button>
           </div>
           <div class="promo-message" id="promoMessage"></div>
@@ -99,7 +99,7 @@
             </div>
             <div class="form-group">
               <label>📦 Нова Пошта (Місто та № відділення / поштомату):</label>
-              <input type="text" id="orderAddress" required placeholder="Київ, Відділення №15 (вул. Хрещатик)" />
+              <input type="text" id="orderAddress" required placeholder="Київ, Відділення №15" />
             </div>
 
             <div class="order-summary">
@@ -119,6 +119,26 @@
 
             <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">Підтвердити замовлення 🎉</button>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Make Offer Modal (Торг) -->
+    <div class="modal-overlay hidden" id="offerModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>🤝 Запропонувати свою ціну</h2>
+          <button class="close-modal" id="btnCloseOfferModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="offer-product-name" id="offerProductName">Товар</p>
+          <p class="offer-orig-price">Початкова ціна: <span id="offerOrigPrice">0</span> ₴</p>
+          <div class="form-group">
+            <label>Ваша пропозиція (грн):</label>
+            <input type="number" id="offerPriceInput" placeholder="Наприклад: 800" />
+          </div>
+          <button class="btn-submit-offer" id="btnSubmitOffer">Надіслати пропозицію продавцю 📩</button>
+          <div class="offer-status-msg" id="offerStatusMsg"></div>
         </div>
       </div>
     </div>

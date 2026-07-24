@@ -544,3 +544,66 @@ async def cb_admin_promos(callback: types.CallbackQuery):
 
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
+
+
+# ==================== 7. ОБРОБКА ТОРГУ (MAKE AN OFFER) ====================
+
+@router.callback_query(F.data.startswith("offer_acc:"))
+async def cb_accept_offer(callback: types.CallbackQuery, bot: Bot):
+    if not is_admin(callback.from_user.id):
+        return
+
+    parts = callback.data.split(":")
+    buyer_id = int(parts[1])
+    product_id = int(parts[2])
+    offered_price = float(parts[3])
+
+    products = load_products()
+    product = next((p for p in products if p["id"] == product_id), None)
+    product_name = product["name"] if product else f"Товар #{product_id}"
+
+    try:
+        await bot.send_message(
+            chat_id=buyer_id,
+            text=f"🎉 **Вітаємо! Продавець ПРИЙНЯВ вашу пропозицію!**\n\n"
+                 f"🛍️ Товар: **{product_name}**\n"
+                 f"💰 Узгоджена ціна: **{offered_price} грн**!\n\n"
+                 f"Ви можете оформити замовлення через команду /checkout або Mini App! 🚀"
+        )
+    except Exception as e:
+        print(f"[Accept Offer Error]: {e}")
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n✅ **ПРИЙНЯТО** ціну {offered_price} грн для користувача {buyer_id}."
+    )
+    await callback.answer("Пропозицію прийнято!")
+
+
+@router.callback_query(F.data.startswith("offer_rej:"))
+async def cb_reject_offer(callback: types.CallbackQuery, bot: Bot):
+    if not is_admin(callback.from_user.id):
+        return
+
+    parts = callback.data.split(":")
+    buyer_id = int(parts[1])
+    product_id = int(parts[2])
+    offered_price = float(parts[3])
+
+    products = load_products()
+    product = next((p for p in products if p["id"] == product_id), None)
+    product_name = product["name"] if product else f"Товар #{product_id}"
+
+    try:
+        await bot.send_message(
+            chat_id=buyer_id,
+            text=f"🔴 **Дякуємо за вашу пропозицію!**\n\n"
+                 f"На жаль, продавець відхилив ціну **{offered_price} грн** на **{product_name}**.\n"
+                 f"Ви можете запропонувати іншу ціну або придбати товар за оригінальною вартістю."
+        )
+    except Exception as e:
+        print(f"[Reject Offer Error]: {e}")
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n❌ **ВІДХИЛЕНО** ціну {offered_price} грн."
+    )
+    await callback.answer("Пропозицію відхилено.")

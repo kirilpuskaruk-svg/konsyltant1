@@ -122,6 +122,54 @@ async def handle_add_review(request):
         return web.json_response({"success": False, "error": str(e)}, status=400)
 
 
+import aiohttp
+
+async def handle_make_offer(request):
+    try:
+        data = await request.json()
+        user_id = data.get("user_id")
+        product_id = data.get("product_id")
+        offered_price = data.get("offered_price")
+
+        admin_id = os.getenv("ADMIN_ID")
+        bot_token = os.getenv("BOT_TOKEN")
+
+        if admin_id and bot_token and product_id and offered_price:
+            products = load_products()
+            p_obj = next((p for p in products if p["id"] == int(product_id)), None)
+            p_title = p_obj["name"] if p_obj else f"Товар #{product_id}"
+            p_price = p_obj["price"] if p_obj else 0.0
+
+            text = (
+                f"📥 **Нова пропозиція ціни (Торг у Mini App)!**\n\n"
+                f"👤 Покупець ID: `{user_id}`\n"
+                f"🛍️ Товар: **{p_title}**\n"
+                f"🏷️ Оригінальна ціна: **{p_price} грн**\n"
+                f"💰 Запропоновано: **{offered_price} грн**"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                tg_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    "chat_id": int(admin_id),
+                    "text": text,
+                    "parse_mode": "Markdown",
+                    "reply_markup": {
+                        "inline_keyboard": [
+                            [
+                                {"text": f"✅ Прийняти ({offered_price} грн)", "callback_data": f"offer_acc:{user_id}:{product_id}:{offered_price}"},
+                                {"text": "❌ Відхилити", "callback_data": f"offer_rej:{user_id}:{product_id}:{offered_price}"}
+                            ]
+                        ]
+                    }
+                }
+                await session.post(tg_url, json=payload)
+
+        return web.json_response({"success": True, "message": "Пропозицію успішно передано продавцю!"})
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=400)
+
+
 def create_app():
     app = web.Application()
     app.router.add_get("/", handle_index)
@@ -132,6 +180,7 @@ def create_app():
     app.router.add_post("/api/validate_promo", handle_validate_promo)
     app.router.add_post("/api/checkout", handle_checkout)
     app.router.add_post("/api/add_review", handle_add_review)
+    app.router.add_post("/api/make_offer", handle_make_offer)
     return app
 
 
