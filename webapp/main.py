@@ -13,6 +13,9 @@ import ai_manager
 import cart
 import storage
 import admin
+import bonuses
+import categories
+import web_server
 
 load_dotenv()
 
@@ -188,9 +191,6 @@ def save_products(products):
             json.dump(products, f, ensure_ascii=False, indent=2)
 
 
-import categories
-
-
 @dp.message(F.text)
 async def handle_user_text(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
@@ -228,8 +228,8 @@ async def handle_user_text(message: types.Message, state: FSMContext):
         is_admin=is_user_admin
     )
 
-    reply_text = ai_response.get("reply", "")
-    action = ai_response.get("action", "question")
+    reply_text = ai_response.get("reply") or "Дію опрацьовано!"
+    action = str(ai_response.get("action") or "question")
     product_id = ai_response.get("product_id")
     quantity = ai_response.get("quantity") or 1
     promo_code = ai_response.get("promo_code")

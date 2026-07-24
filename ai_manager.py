@@ -97,8 +97,8 @@ def generate_reply(
         parsed_json = json.loads(response_text)
 
         return {
-            "reply": str(parsed_json.get("reply", "Дію опрацьовано!")),
-            "action": parsed_json.get("action", "question"),
+            "reply": str(parsed_json.get("reply") or "Дію опрацьовано!"),
+            "action": str(parsed_json.get("action") or "question"),
             "product_id": parsed_json.get("product_id"),
             "quantity": parsed_json.get("quantity"),
             "promo_code": parsed_json.get("promo_code"),
