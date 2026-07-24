@@ -40,21 +40,35 @@ def load_products():
     return []
 
 
+WEB_APP_URL = os.getenv("WEB_APP_URL", "http://localhost:8080")
+
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     welcome_text = (
-        "Привіт! 🍪 Ласкаво просимо до нашого крафтового магазину печива!\n\n"
-        "Я ваш особистий AI-консультант. Ви можете запитати у мене про асортимент, "
-        "попросити порадити щось смачненьке або відразу додати печиво до кошика.\n\n"
+        "Вітаю у крафтовому магазині печива **Cookie Shop**! 🍪✨\n\n"
+        "Я ваш особистий AI-консультант. За запитом я пораджу найсмачніше печиво, "
+        "допоможу з вибором або відповім на будь-які питання!\n\n"
+        "📱 **Натисніть кнопку нижче, щоб відкрити інтерактивний Mini App магазин з фотографіями, знижками та кошиком!** 🛍️\n\n"
         "Доступні команди:\n"
         "/cart - Переглянути кошик\n"
         "/clear_cart - Очистити кошик\n"
         "/checkout - Оформити замовлення\n"
-        "/help - Довідка"
+        "/admin - Панель адміністратора"
     )
+    
+    inline_kb = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🍪 Відкрити Магазин (Mini App)", web_app=types.WebAppInfo(url=WEB_APP_URL))]
+    ])
+
+    reply_kb = types.ReplyKeyboardMarkup(keyboard=[
+        [types.KeyboardButton(text="🍪 Відкрити Магазин", web_app=types.WebAppInfo(url=WEB_APP_URL))]
+    ], resize_keyboard=True)
+
     storage.save_message(message.from_user.id, "assistant", welcome_text)
-    await message.answer(welcome_text)
+    await message.answer(welcome_text, reply_markup=inline_kb, parse_mode="Markdown")
+    await message.answer("Або скористайтеся кнопкою внизу екрану 👇", reply_markup=reply_kb)
 
 
 @dp.message(Command("help"))
