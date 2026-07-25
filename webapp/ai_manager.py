@@ -21,12 +21,20 @@ def fallback_reply(message: str, products: list, is_admin: bool, promos: dict = 
     # Admin actions fallback
     if is_admin:
         if any(k in msg_lower for k in ["розсилк", "рассылк", "отправь всем", "надішли всім"]):
-            # Extract text after "текстом" or use raw message
             b_text = message
-            if "текстом" in msg_lower:
-                parts = message.split("текстом", 1)
+            cleaned = re.sub(
+                r"^(?:/broadcast|/send|зделай розсилку с таким текстом|сделай рассылку с текстом|зроби розсилку з текстом|зроби розсилку|зделай розсилку|сделай рассылку)\s*",
+                "",
+                b_text,
+                flags=re.IGNORECASE
+            ).strip()
+            if cleaned:
+                b_text = cleaned
+            elif "текстом" in msg_lower:
+                parts = re.split(r"текстом", message, flags=re.IGNORECASE, maxsplit=1)
                 if len(parts) > 1 and parts[1].strip():
                     b_text = parts[1].strip()
+
             return {
                 "reply": f"📢 Отримано вказівку на розсилку! Запускаю відправку всім користувачам: «{b_text}»",
                 "action": "admin_broadcast",

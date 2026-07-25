@@ -388,6 +388,15 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
         elif action == "admin_broadcast":
             b_text = ai_response.get("broadcast_text") or user_text
+            cleaned_b_text = re.sub(
+                r"^(?:/broadcast|/send|зделай розсилку с таким текстом|сделай рассылку с текстом|зроби розсилку з текстом|зроби розсилку|зделай розсилку|сделай рассылку)\s*",
+                "",
+                b_text,
+                flags=re.IGNORECASE
+            ).strip()
+            if cleaned_b_text:
+                b_text = cleaned_b_text
+
             u_ids = storage.get_all_user_ids()
             await message.answer(f"⏳ [AI Admin]: Запускаю масову розсилку для {len(u_ids)} користувачів...")
 
