@@ -383,7 +383,10 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
     # Зберігаємо та відправляємо відповідь бота
     storage.save_message(user_id, "assistant", reply_text)
-    await message.answer(reply_text, parse_mode="Markdown")
+    try:
+        await message.answer(reply_text, parse_mode="Markdown")
+    except Exception:
+        await message.answer(reply_text)
 
 
 async def main():

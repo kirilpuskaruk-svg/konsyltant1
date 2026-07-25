@@ -535,6 +535,14 @@ async def cmd_broadcast_direct(message: types.Message, bot: Bot):
 
     text_arg = raw_text[split_pos:].strip() if split_pos != -1 else ""
 
+    # Clean preambles like "Зделай розсилку с таким текстом" or "зроби розсилку"
+    low_text = text_arg.lower()
+    for preamble in ["зделай розсилку с таким текстом", "сделай рассылку с текстом", "зроби розсилку з текстом", "зроби розсилку"]:
+        if preamble in low_text:
+            idx = low_text.find(preamble) + len(preamble)
+            text_arg = text_arg[idx:].strip()
+            break
+
     if not text_arg:
         await message.answer(
             "📢 **Команда масової розсилки**\n\n"
