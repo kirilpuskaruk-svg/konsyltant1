@@ -1,11 +1,17 @@
 import os
 import json
 import asyncio
+import aiohttp
 from aiohttp import web
 import storage
 import cart
 import bonuses
 import reviews
+
+
+def load_products():
+    return storage._read_json("products.json", [])
+
 
 
 async def start_bot_task(app):
@@ -123,6 +129,41 @@ async def handle_checkout(request):
         saved = storage.save_order(order_data)
         cart.clear_cart(user_id)
 
+        # Notify all admins via Telegram
+        admin_id_env = os.getenv("ADMIN_ID", "")
+        bot_token = os.getenv("BOT_TOKEN", "")
+        if admin_id_env and bot_token:
+            items_text = "\n".join(
+                f"  • {item.get('name', '?')} x{item.get('quantity', 1)} = {float(item.get('price', 0)) * item.get('quantity', 1)} ₴"
+                for item in items
+            )
+            notify_text = (
+                f"🛒 <b>Нове замовлення #{saved.get('order_id')}!</b>\n\n"
+                f"👤 Клієнт: <b>{name}</b>\n"
+                f"📞 Телефон: <b>{phone}</b>\n"
+                f"📦 Адреса: <b>{address}</b>\n"
+                f"🆔 Telegram ID: <code>{user_id}</code>\n\n"
+                f"🛍 Товари:\n{items_text}\n\n"
+                f"💰 Сума: <b>{final_total} ₴</b>"
+            )
+            if discount + bonus_deducted > 0:
+                notify_text += f"\n🎁 Знижка: -{round(discount + bonus_deducted, 2)} ₴"
+
+            try:
+                async with aiohttp.ClientSession() as session:
+                    for admin_id in admin_id_env.split(","):
+                        admin_id = admin_id.strip()
+                        if not admin_id.lstrip("-").isdigit():
+                            continue
+                        tg_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                        await session.post(tg_url, json={
+                            "chat_id": int(admin_id),
+                            "text": notify_text,
+                            "parse_mode": "HTML"
+                        })
+            except Exception as notify_err:
+                print(f"[Checkout Notify Error]: {notify_err}")
+
         return web.json_response({"success": True, "order_id": saved.get("order_id")})
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=400)
@@ -142,8 +183,6 @@ async def handle_add_review(request):
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=400)
 
-
-import aiohttp
 
 async def handle_make_offer(request):
     try:
@@ -171,20 +210,25 @@ async def handle_make_offer(request):
 
             async with aiohttp.ClientSession() as session:
                 tg_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-                payload = {
-                    "chat_id": int(admin_id),
-                    "text": text,
-                    "parse_mode": "Markdown",
-                    "reply_markup": {
-                        "inline_keyboard": [
-                            [
-                                {"text": f"✅ Прийняти ({offered_price} грн)", "callback_data": f"offer_acc:{user_id}:{product_id}:{offered_price}"},
-                                {"text": "❌ Відхилити", "callback_data": f"offer_rej:{user_id}:{product_id}:{offered_price}"}
+                # Support multiple admin IDs separated by comma
+                for a_id in admin_id.split(","):
+                    a_id = a_id.strip()
+                    if not a_id.lstrip("-").isdigit():
+                        continue
+                    payload = {
+                        "chat_id": int(a_id),
+                        "text": text,
+                        "parse_mode": "Markdown",
+                        "reply_markup": {
+                            "inline_keyboard": [
+                                [
+                                    {"text": f"✅ Прийняти ({offered_price} грн)", "callback_data": f"offer_acc:{user_id}:{product_id}:{offered_price}"},
+                                    {"text": "❌ Відхилити", "callback_data": f"offer_rej:{user_id}:{product_id}:{offered_price}"}
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }
-                await session.post(tg_url, json=payload)
+                    await session.post(tg_url, json=payload)
 
         return web.json_response({"success": True, "message": "Пропозицію успішно передано продавцю!"})
     except Exception as e:
