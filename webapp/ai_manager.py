@@ -18,17 +18,30 @@ def get_client():
 def fallback_reply(message: str, products: list, is_admin: bool, promos: dict = None) -> dict:
     msg_lower = message.lower().strip()
 
-    # Admin actions
+    # Admin actions fallback
     if is_admin:
+        if any(k in msg_lower for k in ["розсилк", "рассылк", "отправь всем", "надішли всім"]):
+            # Extract text after "текстом" or use raw message
+            b_text = message
+            if "текстом" in msg_lower:
+                parts = message.split("текстом", 1)
+                if len(parts) > 1 and parts[1].strip():
+                    b_text = parts[1].strip()
+            return {
+                "reply": f"📢 Отримано вказівку на розсилку! Запускаю відправку всім користувачам: «{b_text}»",
+                "action": "admin_broadcast",
+                "broadcast_text": b_text
+            }
+
         if "адмін" in msg_lower or "права" in msg_lower or "статус" in msg_lower:
             return {
-                "reply": "Так, я підтверджую ваші адмін-права! 👑 Я можу керувати товарами, категоріями, промокодами та замовленнями.",
+                "reply": "Так, я підтверджую ваші адмін-права! 👑 Я можу керувати товарами, категоріями, промокодами, замовленнями та робити розсилку.",
                 "action": "question"
             }
 
     # Product search / inventory query
     matching_prods = []
-    stop_words = {"про", "для", "які", "хто", "чим", "що", "або", "при", "від"}
+    stop_words = {"про", "для", "які", "хто", "чем", "що", "або", "при", "від"}
     words = [w for w in msg_lower.split() if len(w) > 2 and w not in stop_words]
 
     for p in products:
@@ -89,7 +102,7 @@ def generate_reply(
     is_admin: bool = False
 ) -> dict:
     """
-    Генерує відповідь клієнту через Gemini API з надійним смарт-фолбеком при вичерпанні лімітів API.
+    Генерує відповідь клієнту через Gemini API з підтримкою автоматичних адмін-розсилок та дій.
     """
     products_str = json.dumps(products or [], ensure_ascii=False, indent=2)
     cart_str = json.dumps(user_cart or [], ensure_ascii=False, indent=2)
@@ -119,9 +132,10 @@ def generate_reply(
         system_instruction += """
 👑 АДМІНІСТРАТИВНІ МОЖЛИВОСТІ (КОРИСТУВАЧ — АДМІНІСТРАТОР ВАШОГО МАГАЗИНУ):
 Зараз ви спілкуєтеся з АДМІНІСТРАТОРОМ магазину!
-Якщо він запитує про свій статус чи адмінку, підтверди у полі "reply", що ти бачиш його адмін-права (👑).
+Якщо він просить зробити розсилку (наприклад "Зделай розсилку с таким текстом..."), ти повинен відповісти ствердно та встановити:
+action: "admin_broadcast", broadcast_text: str (текст для розсилки користувачам).
 
-Якщо він просить виконати конкретну дію у текстовій формі:
+Також доступні інші адмін-дії:
 - Додати товар: action: "admin_add_product", product_name: str, product_price: float, category_name: str, condition: str, description: str
 - Видалити товар: action: "admin_delete_product", product_id: int, product_name: str
 - Додати категорію: action: "admin_add_category", category_name: str
@@ -173,7 +187,6 @@ def generate_reply(
             cleaned_text = re.sub(r'^```json\s*|^```\s*|```$', '', response.text.strip(), flags=re.MULTILINE).strip()
             parsed_json = json.loads(cleaned_text)
 
-            # Safely extract product_id as integer if available
             p_id = parsed_json.get("product_id")
             if p_id is not None:
                 try:
@@ -191,6 +204,7 @@ def generate_reply(
             return {
                 "reply": str(parsed_json.get("reply") or "Вітаю! Чим можу допомогти?"),
                 "action": str(parsed_json.get("action") or "question"),
+                "broadcast_text": parsed_json.get("broadcast_text"),
                 "product_id": p_id,
                 "order_id": o_id,
                 "quantity": parsed_json.get("quantity", 1),

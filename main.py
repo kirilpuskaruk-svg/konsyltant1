@@ -350,15 +350,33 @@ async def handle_user_text(message: types.Message, state: FSMContext):
                 web_server.save_promos(promos)
                 reply_text += f"\n\n🏷️ [AI Admin]: Промокод `{pr_code}` на **{pct}%** активовано!"
 
-        elif action == "admin_update_order":
-            o_id = ai_response.get("order_id")
-            n_st = ai_response.get("new_status") or "completed"
-            if o_id:
-                updated = storage.update_order_status(o_id, n_st)
-                if updated:
-                    reply_text += f"\n\n📦 [AI Admin]: Статус замовлення #{o_id} змінено на **{n_st}**!"
-                else:
-                    reply_text += f"\n\n⚠️ Замовлення #{o_id} не знайдено."
+        elif action == "admin_broadcast":
+            b_text = ai_response.get("broadcast_text") or user_text
+            u_ids = storage.get_all_user_ids()
+            await message.answer(f"⏳ [AI Admin]: Запускаю масову розсилку для {len(u_ids)} користувачів...")
+
+            reply_markup = None
+            if "|" in b_text:
+                parts = [p.strip() for p in b_text.split("|")]
+                if len(parts) >= 3:
+                    b_text = parts[0]
+                    reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
+                        [types.InlineKeyboardButton(text=parts[1], url=parts[2])]
+                    ])
+
+            succ = 0
+            fail = 0
+            for uid in u_ids:
+                try:
+                    await bot.send_message(chat_id=int(uid), text=b_text, reply_markup=reply_markup, parse_mode="Markdown")
+                    succ += 1
+                except Exception:
+                    try:
+                        await bot.send_message(chat_id=int(uid), text=b_text, reply_markup=reply_markup)
+                        succ += 1
+                    except Exception:
+                        fail += 1
+            reply_text += f"\n\n📢 **[AI Admin]: Розсилку завершено!**\n✅ Успішно: **{succ}** | ❌ Помилок: **{fail}**"
 
     elif action == "manager":
         reply_text += "\n\n🔔 (Повідомлення передано менеджеру-людині)."
