@@ -37,10 +37,7 @@ class CheckoutState(StatesGroup):
 
 
 def load_products():
-    if os.path.exists("products.json"):
-        with open("products.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    return storage._read_json("products.json", [])
 
 
 WEB_APP_URL = os.getenv("WEB_APP_URL", "").strip()
@@ -181,14 +178,7 @@ async def process_address(message: types.Message, state: FSMContext):
 
 
 def save_products(products):
-    try:
-        with open("products.json", "w", encoding="utf-8") as f:
-            json.dump(products, f, ensure_ascii=False, indent=2)
-    except OSError:
-        import tempfile
-        tmp_path = os.path.join(tempfile.gettempdir(), "products.json")
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(products, f, ensure_ascii=False, indent=2)
+    storage._write_json("products.json", products)
 
 
 @dp.message(F.text)
