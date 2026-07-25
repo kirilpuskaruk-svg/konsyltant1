@@ -258,6 +258,12 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     quantity = ai_response.get("quantity") or 1
     promo_code = ai_response.get("promo_code")
 
+    # Перевіряємо чи це адмін-розсилка звичайним текстом (без /)
+    if is_user_admin and action != "admin_broadcast":
+        low_t = user_text.lower()
+        if any(k in low_t for k in ["розсилк", "рассылк", "отправь всем", "надішли всім"]):
+            action = "admin_broadcast"
+
     # 4. Обробка розширених дій (actions)
     if action == "add_to_cart" and product_id:
         try:
