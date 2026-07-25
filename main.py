@@ -1,9 +1,10 @@
 import os
+import re
 import json
 import logging
 import asyncio
 from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types, F, BaseMiddleware
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -27,6 +28,18 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
+
+
+class AutoRegisterMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        user = getattr(event, "from_user", None)
+        if user and user.id:
+            storage.register_user(user.id)
+        return await handler(event, data)
+
+
+dp.message.outer_middleware(AutoRegisterMiddleware())
+dp.callback_query.outer_middleware(AutoRegisterMiddleware())
 dp.include_router(admin.router)
 
 

@@ -1,22 +1,14 @@
-import json
-import os
+import storage
 
 REVIEWS_FILE = "reviews.json"
 
 
 def _read_reviews():
-    if not os.path.exists(REVIEWS_FILE):
-        return []
-    try:
-        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return []
+    return storage._read_json(REVIEWS_FILE, [])
 
 
 def _write_reviews(data):
-    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    storage._write_json(REVIEWS_FILE, data)
 
 
 def get_reviews(product_id=None):

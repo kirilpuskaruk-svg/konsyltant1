@@ -23,7 +23,8 @@ from main import dp
 
 
 async def process_telegram_update(update_data):
-    # Create fresh bot instance per request to avoid closed event loop session reuse
+    if not BOT_TOKEN:
+        return
     bot = Bot(token=BOT_TOKEN)
     try:
         update = Update.model_validate(update_data, context={"bot": bot})
@@ -39,23 +40,18 @@ class handler(BaseHTTPRequestHandler):
         
         try:
             update_data = json.loads(post_data.decode('utf-8'))
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(process_telegram_update(update_data))
-            finally:
-                loop.close()
+            asyncio.run(process_telegram_update(update_data))
 
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type', 'application/json; charset=utf-8')
             self.end_headers()
             self.wfile.write(json.dumps({"status": "ok"}).encode('utf-8'))
         except Exception as e:
             print(f"[Vercel Webhook Exception]: {e}")
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type', 'application/json; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+            self.wfile.write(json.dumps({"status": "ok", "notice": "handy_suppressed"}).encode('utf-8'))
 
     def do_GET(self):
         self.send_response(200)

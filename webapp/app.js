@@ -374,13 +374,16 @@ function startVoiceSearch() {
   btnMic.classList.add("listening");
 
   recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    document.getElementById("searchInput").value = transcript;
-    filterAndRenderProducts();
+    const transcript = event.results?.[0]?.[0]?.transcript || "";
+    if (transcript) {
+      document.getElementById("searchInput").value = transcript;
+      filterAndRenderProducts();
+    }
     btnMic.classList.remove("listening");
   };
 
-  recognition.onerror = () => {
+  recognition.onerror = (err) => {
+    console.warn("Speech recognition error", err);
     btnMic.classList.remove("listening");
   };
 
@@ -388,7 +391,12 @@ function startVoiceSearch() {
     btnMic.classList.remove("listening");
   };
 
-  recognition.start();
+  try {
+    recognition.start();
+  } catch (e) {
+    console.warn("Speech start error", e);
+    btnMic.classList.remove("listening");
+  }
 }
 
 // --- Cart Actions ---
@@ -435,11 +443,54 @@ function updateCartUI() {
 // --- Nova Poshta Autocomplete ---
 const npCities = ["Київ", "Харків", "Одеса", "Дніпро", "Львів", "Запоріжжя", "Кривий Ріг", "Миколаїв", "Вінниця", "Полтава", "Чернігів", "Черкаси", "Житомир", "Суми", "Хмельницький", "Чернівці", "Рівне", "Івано-Франківськ", "Тернопіль", "Ужгород", "Луцьк"];
 
+function renderWarehouses(filterVal = "") {
+  const whDropdown = document.getElementById("npWarehouseDropdown");
+  if (!whDropdown) return;
+  whDropdown.innerHTML = "";
+  whDropdown.classList.remove("hidden");
+  const val = filterVal.toLowerCase().trim();
+
+  let count = 0;
+  for (let i = 1; i <= 20; i++) {
+    const label = `Відділення №${i}`;
+    if (!val || label.toLowerCase().includes(val)) {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item";
+      div.innerText = label;
+      div.onclick = () => {
+        document.getElementById("npWarehouseInput").value = label;
+        whDropdown.classList.add("hidden");
+      };
+      whDropdown.appendChild(div);
+      count++;
+    }
+  }
+
+  const posLabel = "Поштомат №1001";
+  if (!val || posLabel.toLowerCase().includes(val)) {
+    const pos = document.createElement("div");
+    pos.className = "autocomplete-item";
+    pos.innerText = posLabel;
+    pos.onclick = () => {
+      document.getElementById("npWarehouseInput").value = posLabel;
+      whDropdown.classList.add("hidden");
+    };
+    whDropdown.appendChild(pos);
+    count++;
+  }
+
+  if (count === 0) {
+    whDropdown.classList.add("hidden");
+  }
+}
+
 function initNovaPoshtaAutocomplete() {
   const cityInput = document.getElementById("npCityInput");
   const cityDropdown = document.getElementById("npCityDropdown");
   const whInput = document.getElementById("npWarehouseInput");
   const whDropdown = document.getElementById("npWarehouseDropdown");
+
+  if (!cityInput || !cityDropdown || !whInput || !whDropdown) return;
 
   cityInput.addEventListener("input", () => {
     const val = cityInput.value.trim().toLowerCase();
@@ -469,12 +520,6 @@ function initNovaPoshtaAutocomplete() {
   });
 
   whInput.addEventListener("focus", () => {
-    whDropdown.innerHTML = "";
-    whDropdown.classList.remove("hidden");
-    for (let i = 1; i <= 15; i++) {
-      const div = document.createElement("div");
-      div.className = "autocomplete-item";
-      div.innerText = `Відділення №${i}`;
       div.onclick = () => {
         whInput.value = `Відділення №${i}`;
         whDropdown.classList.add("hidden");
