@@ -2,6 +2,9 @@ import json
 import os
 import csv
 import tempfile
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ORDERS_FILE = "orders.json"
 CARTS_FILE = "carts.json"
