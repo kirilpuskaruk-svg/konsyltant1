@@ -50,7 +50,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     storage.register_user(user_id)
     
     welcome_text = (
-        "Вітаю у крафтовому магазині Cookie Shop! 🧸✨\n\n"
+        "Вітаю у магазині Store & Collectibles! 🧸✨\n\n"
         "Я ваш особистий AI-консультант. Ви можете запитати у мене про асортимент, "
         "попросити порадити щось цікаве або відразу додати товар до кошика.\n\n"
         "Доступні команди:\n"
@@ -82,9 +82,9 @@ async def cmd_admin_main(message: types.Message, state: FSMContext):
 async def cmd_help(message: types.Message):
     help_text = (
         "Як зі мною спілкуватися?\n"
-        "• Просто напишіть, що ви шукаєте (наприклад: 'Яке печиво з горіхами є?').\n"
-        "• Вкажіть бажання купити (наприклад: 'Хочу дві коробки шоколадного печива').\n"
-        "• Напишіть 'Оформлюємо' або опустіть команду /checkout для завершення замовлення."
+        "• Просто напишіть, що ви шукаете (наприклад: 'Які фігурки є в наявності?').\n"
+        "• Вкажіть бажання купити (наприклад: 'Хочу замовити фігурку Ані').\n"
+        "• Або скористайтеся Mini App кнопку внизу для швидкого замовлення! 🛒"
     )
     await message.answer(help_text)
 
@@ -96,16 +96,21 @@ async def cmd_cart(message: types.Message):
     cart_info = cart.get_cart_total(user_id, products)
 
     if not cart_info["items"]:
-        await message.answer("Ваш кошик порожній 🛒. Напишіть мені, яке печиво бажаєте додати!")
+        await message.answer("Ваш кошик порожній 🛒. Напишіть мені, який товар бажаєте додати!")
         return
 
-    text = "🛒 **Ваш кошик:**\n\n"
-    for idx, item in enumerate(cart_info["items"], 1):
-        text += f"{idx}. {item['name']} — {item['quantity']} шт. x {item['price']} грн = {item['subtotal']} грн\n"
-    
-    text += f"\n**Загальна сума:** {cart_info['total_price']} грн\n"
-    text += "\nЩоб оформити замовлення, напишіть 'Оформлюємо' або викличте команду /checkout."
-    await message.answer(text, parse_mode="Markdown")
+    text = "🛒 **Ваш поточний кошик:**\n\n"
+    for item in cart_info["items"]:
+        text += f"• **{item['name']}** x{item['quantity']} = {item['subtotal']} грн\n"
+
+    text += f"\n💰 **Загальна сума:** {cart_info['total_price']} грн"
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🚀 Оформити замовлення", callback_data="checkout")],
+        [types.InlineKeyboardButton(text="🗑️ Очистити кошик", callback_data="clear_cart")]
+    ])
+
+    await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
 
 
 @dp.message(Command("clear_cart"))
@@ -173,7 +178,7 @@ async def process_address(message: types.Message, state: FSMContext):
         f"📞 Телефон: {saved_order['phone']}\n"
         f"📍 Адреса: {saved_order['address']}\n"
         f"💰 Загальна сума: {saved_order['total_price']} грн\n\n"
-        f"Дякуємо, що обираєте Cookie Shop! Наш менеджер скоро зв'яжеться з вами. 🍪✨"
+        f"Дякуємо, що обираєте наш магазин! Наш менеджер скоро зв'яжеться з вами. 🛍️✨"
     )
     await message.answer(order_success_msg, parse_mode="Markdown")
 

@@ -92,7 +92,7 @@ async def cb_admin_menu(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("⛔ Немає доступу.", show_alert=True)
         return
 
-    text = "⚙️ **Панель Адміністратора Cookie Shop** 🍪\n\nОберіть розділ:"
+    text = "⚙️ **Панель Адміністратора Магазину** 🛍️\n\nОберіть розділ:"
     await callback.message.edit_text(text, reply_markup=get_main_admin_keyboard(), parse_mode="Markdown")
     await callback.answer()
 
@@ -338,7 +338,7 @@ async def cb_start_add_product(callback: types.CallbackQuery, state: FSMContext)
 
     await state.set_state(AdminAddProduct.name)
     await callback.message.edit_text(
-        "➕ **Додавання нового печива**\n\nВведіть **назву** нового печива:",
+        "➕ **Додавання нового товару**\n\nВведіть **назву** нового товару:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Скасувати", callback_data="admin_products")]]),
         parse_mode="Markdown"
     )
@@ -349,14 +349,14 @@ async def cb_start_add_product(callback: types.CallbackQuery, state: FSMContext)
 async def process_add_prod_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
     await state.set_state(AdminAddProduct.description)
-    await message.answer("Тепер введіть **короткий опис** печива:")
+    await message.answer("Тепер введіть **короткий опис** товару:")
 
 
 @router.message(AdminAddProduct.description)
 async def process_add_prod_desc(message: types.Message, state: FSMContext):
     await state.update_data(description=message.text.strip())
     await state.set_state(AdminAddProduct.price)
-    await message.answer("Тепер введіть **ціну** печива (число у грн, наприклад: 120):")
+    await message.answer("Тепер введіть **ціну** товару (число у грн, наприклад: 120):")
 
 
 @router.message(AdminAddProduct.price)
@@ -371,7 +371,7 @@ async def process_add_prod_price(message: types.Message, state: FSMContext):
     cart.add_product(name=data["name"], description=data["description"], price=price, in_stock=True)
     await state.clear()
 
-    await message.answer(f"🎉 **Нове печиво '{data['name']}' успішно додано до каталогу!**")
+    await message.answer(f"🎉 **Новий товар '{data['name']}' успішно додано до каталогу!**")
 
 
 # --- Зміна ціни ---
@@ -386,7 +386,7 @@ async def cb_start_edit_price(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdminEditPrice.price)
 
     await callback.message.edit_text(
-        f"✏️ **Зміна ціни для печива #{prod_id}**\n\nВведіть нову ціну (у грн):",
+        f"✏️ **Зміна ціни для товару #{prod_id}**\n\nВведіть нову ціну (у грн):",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Скасувати", callback_data=f"admin_prod_detail_{prod_id}")]])
     )
     await callback.answer()
@@ -513,10 +513,28 @@ async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_ms
 @router.message(Command("send"))
 @router.message(F.text & (F.text.startswith("/broadcast") | F.text.startswith("/send")))
 async def cmd_broadcast_direct(message: types.Message, bot: Bot):
-    if not is_admin(message.from_user.id):
+    user_id = message.from_user.id
+    storage.register_user(user_id)
+
+    if not is_admin(user_id):
+        await message.answer(f"⛔ У вас немає прав адміна. Ваш Telegram ID: `{user_id}`", parse_mode="Markdown")
         return
 
-    text_arg = message.text.partition(" ")[2].strip()
+    # Remove command prefix (/broadcast or /send) preserving multiline text
+    raw_text = message.text
+    first_space = raw_text.find(" ")
+    first_newline = raw_text.find("\n")
+    split_pos = -1
+
+    if first_space != -1 and first_newline != -1:
+        split_pos = min(first_space, first_newline)
+    elif first_space != -1:
+        split_pos = first_space
+    elif first_newline != -1:
+        split_pos = first_newline
+
+    text_arg = raw_text[split_pos:].strip() if split_pos != -1 else ""
+
     if not text_arg:
         await message.answer(
             "📢 **Команда масової розсилки**\n\n"
@@ -528,7 +546,7 @@ async def cmd_broadcast_direct(message: types.Message, bot: Bot):
         )
         return
 
-    await execute_broadcast(bot, message.from_user.id, text_arg, message)
+    await execute_broadcast(bot, user_id, text_arg, message)
 
 
 @router.callback_query(F.data == "admin_broadcast")
