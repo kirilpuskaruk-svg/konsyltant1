@@ -446,36 +446,23 @@ async def cb_admin_stats(callback: types.CallbackQuery):
 
 # ==================== 4. МАСОВА РОЗСИЛКА ТА PUSH ====================
 
-@router.callback_query(F.data == "admin_broadcast")
-async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        return
-
-    users_count = len(storage.get_all_user_ids())
-    await state.set_state(AdminBroadcast.text)
-
-    text = (
-        "📢 **Масова Push-Розсилка Повідомлень**\n\n"
-        f"👥 Отримувачів у базі: **{users_count}**\n\n"
-        "Надішліть текст розсилки.\n\n"
-        "💡 **Підказка (Кнопка)**: Ви можете додати кнопку у форматі:\n"
-        "`Текст повідомлення | Текст Кнопки | URL-посилання`\n"
-        "Наприклад:\n`Знижка -20% на фігурки! | 🛍 Відкрити магазин | https://t.me/yourbot`"
-    )
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Скасувати", callback_data="admin_menu")]
-    ])
-
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
-    await callback.answer()
+BROADCAST_STATE_FILE = "broadcast_state.json"
 
 
-@router.message(AdminBroadcast.text)
-async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot):
-    full_text = message.text.strip()
+def set_awaiting_broadcast(admin_id, flag=True):
+    data = storage._read_json(BROADCAST_STATE_FILE, {})
+    data[str(admin_id)] = flag
+    storage._write_json(BROADCAST_STATE_FILE, data)
+
+
+def is_awaiting_broadcast(admin_id):
+    data = storage._read_json(BROADCAST_STATE_FILE, {})
+    return data.get(str(admin_id), False)
+
+
+async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_msg: types.Message):
     user_ids = storage.get_all_user_ids()
-    await state.clear()
+    set_awaiting_broadcast(admin_id, False)
 
     reply_markup = None
     broadcast_text = full_text
@@ -491,7 +478,7 @@ async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot)
                 [InlineKeyboardButton(text=btn_label, url=btn_url)]
             ])
 
-    await message.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
+    await reply_to_msg.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
 
     success_count = 0
     fail_count = 0
@@ -503,11 +490,71 @@ async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot)
         except Exception:
             fail_count += 1
 
-    await message.answer(
+    await reply_to_msg.answer(
         f"📢 **Розсилку завершено!**\n\n"
         f"✅ Успішно доставлено: **{success_count}**\n"
         f"❌ Помилок: **{fail_count}**"
     )
+
+
+@router.message(Command("broadcast"))
+@router.message(Command("send"))
+async def cmd_broadcast_direct(message: types.Message, bot: Bot):
+    if not is_admin(message.from_user.id):
+        return
+
+    text_arg = message.text.partition(" ")[2].strip()
+    if not text_arg:
+        await message.answer(
+            "📢 **Команда масової розсилки**\n\n"
+            "Використання:\n"
+            "`/broadcast Текст розсилки`\n\n"
+            "Або з кнопкою:\n"
+            "`/broadcast Знижка -20%! | 🛍 Магазин | https://t.me/yourbot`",
+            parse_mode="Markdown"
+        )
+        return
+
+    await execute_broadcast(bot, message.from_user.id, text_arg, message)
+
+
+@router.callback_query(F.data == "admin_broadcast")
+async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+
+    users_count = len(storage.get_all_user_ids())
+    set_awaiting_broadcast(callback.from_user.id, True)
+    await state.set_state(AdminBroadcast.text)
+
+    text = (
+        "📢 **Масова Push-Розсилка Повідомлень**\n\n"
+        f"👥 Отримувачів у базі: **{users_count}**\n\n"
+        "Надішліть текст розсилки або скористайтесь командою:\n"
+        "`/broadcast Текст розсилки`\n\n"
+        "💡 **Підказка (Кнопка)**: Ви можете додати кнопку у форматі:\n"
+        "`Текст повідомлення | Текст Кнопки | URL-посилання`\n"
+        "Наприклад:\n`Знижка -20% на фігурки! | 🛍 Відкрити магазин | https://t.me/yourbot`"
+    )
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Скасувати", callback_data="admin_menu")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    await callback.answer()
+
+
+@router.message(AdminBroadcast.text)
+@router.message(F.text & ~F.text.startswith("/"))
+async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot):
+    if not is_admin(message.from_user.id):
+        return
+
+    if is_awaiting_broadcast(message.from_user.id):
+        await state.clear()
+        await execute_broadcast(bot, message.from_user.id, message.text.strip(), message)
+
 
 
 # ==================== 5. ЕКСПОРТ (TXT / CSV) ====================

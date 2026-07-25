@@ -195,8 +195,26 @@ def get_analytics_summary():
     }
 
 
+USERS_FILE = "users.json"
+
+
+def register_user(user_id):
+    if not user_id:
+        return
+    users = _read_json(USERS_FILE, [])
+    u_str = str(user_id)
+    if u_str not in users:
+        users.append(u_str)
+        _write_json(USERS_FILE, users)
+
+
 def get_all_user_ids():
     user_ids = set()
+
+    # Registered users list
+    registered = _read_json(USERS_FILE, [])
+    for uid in registered:
+        user_ids.add(str(uid))
 
     history = _read_json(HISTORY_FILE, {})
     for uid in history.keys():
@@ -208,8 +226,14 @@ def get_all_user_ids():
 
     orders = _read_json(ORDERS_FILE, [])
     for o in orders:
-        if "user_id" in o:
+        if "user_id" in o and o["user_id"]:
             user_ids.add(str(o["user_id"]))
+
+    admin_env = os.getenv("ADMIN_ID", "")
+    for a_id in admin_env.split(","):
+        a_id = a_id.strip()
+        if a_id:
+            user_ids.add(str(a_id))
 
     return list(user_ids)
 

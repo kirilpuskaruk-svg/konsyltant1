@@ -47,6 +47,7 @@ WEB_APP_URL = os.getenv("WEB_APP_URL", "").strip()
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
+    storage.register_user(user_id)
     
     welcome_text = (
         "Вітаю у крафтовому магазині Cookie Shop! 🧸✨\n\n"
@@ -189,6 +190,7 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
     user_id = message.from_user.id
     user_text = message.text
+    storage.register_user(user_id)
 
     if user_text and user_text.startswith("/"):
         return
