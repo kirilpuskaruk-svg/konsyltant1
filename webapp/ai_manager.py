@@ -15,6 +15,26 @@ def get_client():
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
+def generate_product_description(product_name: str) -> str:
+    """Генерує детальний, привабливий опис для колекційного товару через Gemini API."""
+    prompt = (
+        f"Ти — копірайтер магазину колекційних фігурок та мерчу. Створи яскравий, "
+        f"привабливий та продаючий опис українською мовою для товару з назвою: «{product_name}».\n"
+        f"Опис повинен бути довжиною 2-4 речення з красивими емодзі та описом якості матеріалів/деталізації. Поверни ТІЛЬКИ опис без зайвих вступних слів."
+    )
+    try:
+        client = get_client()
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt
+        )
+        if response.text:
+            return response.text.strip()
+    except Exception as e:
+        print(f"[Generate Description Error]: {e}")
+    return f"Преміальна фігурка {product_name}. Висока деталізація, оригінальний дизайн та якісні матеріали. Ідеальний подарунок у колекцію! ✨"
+
+
 def fallback_reply(message: str, products: list, is_admin: bool, promos: dict = None) -> dict:
     msg_lower = message.lower().strip()
 
@@ -120,6 +140,7 @@ def generate_reply(
 👑 АДМІНІСТРАТИВНІ МОЖЛИВОСТІ (КОРИСТУВАЧ — АДМІНІСТРАТОР ВАШОГО МАГАЗИНУ):
 Зараз ви спілкуєтеся з АДМІНІСТРАТОРОМ магазину!
 Доступні адмін-дії:
+- Згенерувати опис товару через AI: action: "admin_generate_description", product_id: int or product_name: str
 - Додати товар: action: "admin_add_product", product_name: str, product_price: float, category_name: str, condition: str, description: str
 - Видалити товар: action: "admin_delete_product", product_id: int, product_name: str
 - Додати категорію: action: "admin_add_category", category_name: str

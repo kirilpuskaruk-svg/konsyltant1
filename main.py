@@ -306,7 +306,24 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
     # --- AUTOMATIC AI ADMIN ACTIONS ---
     elif is_user_admin and action.startswith("admin_"):
-        if action == "admin_add_product":
+        if action == "admin_generate_description":
+            p_id = ai_response.get("product_id")
+            p_name = ai_response.get("product_name")
+            target = None
+            if p_id:
+                target = next((p for p in products if p.get("id") == p_id or str(p.get("id")) == str(p_id)), None)
+            elif p_name:
+                target = next((p for p in products if p_name.lower() in (p.get("name") or "").lower()), None)
+            
+            if target:
+                gen_desc = ai_manager.generate_product_description(target.get("name", "Товар"))
+                target["description"] = gen_desc
+                save_products(products)
+                reply_text += f"\n\n✨ [AI Admin]: Згенеровано новий опис для **«{target['name']}»**:\n_{gen_desc}_"
+            else:
+                reply_text += "\n\n⚠️ [AI Admin]: Товар не знайдено."
+
+        elif action == "admin_add_product":
             p_name = ai_response.get("product_name") or "Новий товар"
             raw_p = str(ai_response.get("product_price") or "0")
             clean_p = re.sub(r"[^\d.]", "", raw_p.replace(",", "."))

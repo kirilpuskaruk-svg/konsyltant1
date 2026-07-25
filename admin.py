@@ -291,6 +291,7 @@ async def cb_product_detail(callback: types.CallbackQuery):
             InlineKeyboardButton(text="✏️ Змінити ціну", callback_data=f"admin_prod_editprice_{prod_id}")
         ],
         [
+            InlineKeyboardButton(text="✨ AI Опис Товару", callback_data=f"admin_prod_ai_desc_{prod_id}"),
             InlineKeyboardButton(text="🗑️ Видалити товар", callback_data=f"admin_prod_delete_{prod_id}")
         ],
         [
@@ -300,6 +301,30 @@ async def cb_product_detail(callback: types.CallbackQuery):
 
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode="Markdown")
     await callback.answer()
+
+
+@router.callback_query(F.data & F.data.startswith("admin_prod_ai_desc_"))
+async def cb_generate_ai_description(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    prod_id = int(callback.data.replace("admin_prod_ai_desc_", ""))
+    products = cart._load_products()
+    prod = next((p for p in products if p.get("id") == prod_id), None)
+
+    if not prod:
+        await callback.answer("Товар не знайдено.", show_alert=True)
+        return
+
+    await callback.answer("✨ Штучний інтелект генерує новий опис...")
+    new_desc = ai_manager.generate_product_description(prod.get("name", "Товар"))
+    prod["description"] = new_desc
+
+    # Save products
+    storage._write_json("products.json", products)
+
+    callback.data = f"admin_prod_detail_{prod_id}"
+    await cb_product_detail(callback)
 
 
 @router.callback_query(F.data & F.data.startswith("admin_prod_toggle_"))
