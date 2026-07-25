@@ -10,7 +10,6 @@ let appliedPromo = null;
 let discountPercent = 0;
 let userBonuses = 0;
 let activeCategory = "all";
-let currentOfferProduct = null;
 
 const user_id = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : "123456";
 const user_name = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? (tg.initDataUnsafe.user.first_name + ' ' + (tg.initDataUnsafe.user.last_name || '')).trim() : "Клієнт";
@@ -69,10 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Modal open / close
   document.getElementById("btnOpenCheckout").addEventListener("click", openCheckoutModal);
   document.getElementById("btnCloseModal").addEventListener("click", closeCheckoutModal);
-
-  // Offer modal close
-  document.getElementById("btnCloseOfferModal").addEventListener("click", closeOfferModal);
-  document.getElementById("btnSubmitOffer").addEventListener("click", submitOffer);
 
   // Promo code
   document.getElementById("btnApplyPromo").addEventListener("click", applyPromoCode);
@@ -187,9 +182,8 @@ function filterAndRenderProducts() {
           ${videoBtn}
         </div>
         <div class="card-buttons-row">
-          <button class="btn-offer" onclick="openOfferModal(${p.id})">🤝 Торг</button>
           ${qtyInCart === 0 ? `
-            <button class="btn-add-cart" onclick="addToCart(${p.id})">+ Додати</button>
+            <button class="btn-add-cart" onclick="addToCart(${p.id})">+ Додати до кошика</button>
           ` : `
             <div class="qty-controls">
               <button onclick="changeQty(${p.id}, -1)">-</button>
@@ -243,50 +237,6 @@ function updateCartUI() {
   }
 }
 
-// MAKE OFFER MODAL
-function openOfferModal(productId) {
-  currentOfferProduct = products.find(p => p.id == productId);
-  if (!currentOfferProduct) return;
-
-  document.getElementById("offerProductName").innerText = currentOfferProduct.name;
-  document.getElementById("offerOrigPrice").innerText = currentOfferProduct.price;
-  document.getElementById("offerPriceInput").value = "";
-  document.getElementById("offerStatusMsg").innerText = "";
-  document.getElementById("offerModal").classList.remove("hidden");
-}
-
-function closeOfferModal() {
-  document.getElementById("offerModal").classList.add("hidden");
-}
-
-async function submitOffer() {
-  const priceVal = parseFloat(document.getElementById("offerPriceInput").value);
-  if (!priceVal || priceVal <= 0) {
-    document.getElementById("offerStatusMsg").innerText = "⚠️ Введіть коректну ціну!";
-    return;
-  }
-
-  try {
-    const res = await fetch("/api/make_offer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: user_id,
-        product_id: currentOfferProduct.id,
-        offered_price: priceVal
-      })
-    });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById("offerStatusMsg").innerText = "🎉 Пропозицію надіслано продавцю!";
-      setTimeout(closeOfferModal, 1800);
-    } else {
-      document.getElementById("offerStatusMsg").innerText = "❌ Помилка: " + data.error;
-    }
-  } catch (err) {
-    document.getElementById("offerStatusMsg").innerText = "❌ Помилка з'єднання.";
-  }
-}
 
 // CHECKOUT MODAL
 function openCheckoutModal() {

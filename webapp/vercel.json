@@ -4,7 +4,6 @@
     { "source": "/api/categories", "destination": "/api/categories.py" },
     { "source": "/api/user_bonuses", "destination": "/api/user_bonuses.py" },
     { "source": "/api/checkout", "destination": "/api/checkout.py" },
-    { "source": "/api/make_offer", "destination": "/api/make_offer.py" },
     { "source": "/api/telegram", "destination": "/api/telegram.py" }
   ]
 }

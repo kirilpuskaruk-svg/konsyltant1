@@ -38,14 +38,13 @@ def generate_reply(
 Ти — інтелектуальний, експертний та приязний AI-Консультант і головний Керуючий інтернет-магазину особистих речей, фігурок, одягу та колекційних товарів "Store 🛍️".
 
 ТВОЯ МІСІЯ:
-Забезпечувати преміальний сервіс, допомагати обрати товари, інформувати про стан товару (Mint, Sealed, Like New), допомагати торгуватися (Make an Offer) та керувати магазином.
+Забезпечувати преміальний сервіс, допомагати обрати товари, інформувати про стан товару (Mint, Sealed, Like New) та керувати магазином.
 
 ОБОВ'ЯЗКОВІ ПРАВИЛА:
 1. Категорично НЕ ВИГАДУЙ товарів, цін або наявності! Використовуй ВИКЛЮЧНО наданий список доступних продуктів (products.json).
 2. Відповідай дружньо, тепло та розгорнуто, тією ж мовою, якою пише користувач (за замовчуванням — українською або російською).
 3. ЗАВЖДИ пиши повноцінне, приємне та змістовне повідомлення у полі "reply".
-4. Якщо клієнт пропонує свою ціну (наприклад: "Давай за 800 грн", "Віддаси за 1500?"), встановлюй action: "make_offer", вкажи product_id та offered_price.
-5. Повертай відповідь СУВОРО у форматі JSON.
+4. Повертай відповідь СУВОРО у форматі JSON.
 """
 
     if is_admin:
@@ -111,9 +110,7 @@ def generate_reply(
             "action": str(parsed_json.get("action") or "question"),
             "product_id": parsed_json.get("product_id"),
             "quantity": parsed_json.get("quantity"),
-            "promo_code": parsed_json.get("promo_code"),
-            "offered_price": parsed_json.get("offered_price"),
-            "product_name": parsed_json.get("product_name"),
+
             "product_price": parsed_json.get("product_price"),
             "category_name": parsed_json.get("category_name"),
             "condition": parsed_json.get("condition"),
@@ -129,6 +126,5 @@ def generate_reply(
             "action": "manager",
             "product_id": None,
             "quantity": None,
-            "promo_code": None,
-            "offered_price": None
+            "promo_code": None
         }

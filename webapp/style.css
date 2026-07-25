@@ -310,27 +310,6 @@ body {
   margin-top: 4px;
 }
 
-.btn-offer {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-main);
-  padding: 10px 8px;
-  border-radius: 14px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-offer:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-}
 
 .btn-add-cart, .btn-add {
   flex: 1.2;
@@ -554,7 +533,7 @@ body {
   border-color: var(--accent-color);
 }
 
-.btn-submit, .btn-confirm-order, .btn-submit-offer {
+.btn-submit, .btn-confirm-order {
   width: 100%;
   padding: 14px;
   background: var(--accent-gradient);
@@ -570,7 +549,7 @@ body {
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.btn-submit:active, .btn-confirm-order:active, .btn-submit-offer:active {
+.btn-submit:active, .btn-confirm-order:active {
   transform: scale(0.98);
 }
 
@@ -854,34 +833,6 @@ body {
   font-size: 18px;
 }
 
-/* Offer modal specific */
-.offer-product-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-
-.offer-orig-price {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-}
-
-.offer-orig-price strong,
-.offer-orig-price span {
-  color: var(--accent-color);
-  font-weight: 700;
-}
-
-.offer-status-msg {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--success-color);
-  text-align: center;
-  min-height: 18px;
-}
 
 /* Responsive Media Queries */
 
