@@ -202,10 +202,18 @@ async function fetchCategories() {
 async function fetchProducts() {
   try {
     const res = await fetch("/api/products");
+    if (!res.ok) throw new Error("Backend return " + res.status);
     products = await res.json();
     filterAndRenderProducts();
   } catch (e) {
-    console.error("Products fetch error", e);
+    console.warn("Products fetch error, falling back to products.json", e);
+    try {
+      const resLocal = await fetch("products.json");
+      products = await resLocal.json();
+      filterAndRenderProducts();
+    } catch (errLocal) {
+      console.error("Local products.json load error", errLocal);
+    }
   }
 }
 
@@ -262,7 +270,10 @@ function filterAndRenderProducts() {
     const matchesCat = (activeCategory === "all") ||
                        (activeCategory === "wishlist" && wishlist.includes(p.id)) ||
                        (p.category === activeCategory);
-    const matchesSearch = p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query);
+    const matchesSearch = p.name.toLowerCase().includes(query) ||
+                          p.description.toLowerCase().includes(query) ||
+                          (p.name_en && p.name_en.toLowerCase().includes(query)) ||
+                          (p.description_en && p.description_en.toLowerCase().includes(query));
     return matchesCat && matchesSearch;
   });
 

@@ -579,7 +579,6 @@ async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
 
 
 @router.message(AdminBroadcast.text)
-@router.message(F.text & ~F.text.startswith("/"))
 async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot):
     if not is_admin(message.from_user.id):
         return

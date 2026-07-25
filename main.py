@@ -113,6 +113,20 @@ async def cmd_cart(message: types.Message):
     await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
 
 
+@dp.callback_query(F.data == "checkout")
+async def cb_checkout(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await cmd_checkout(callback.message, state)
+
+
+@dp.callback_query(F.data == "clear_cart")
+async def cb_clear_cart_callback(callback: types.CallbackQuery):
+    await callback.answer("Кошик очищено!")
+    user_id = callback.from_user.id
+    cart.clear_cart(user_id)
+    await callback.message.edit_text("Ваш кошик очищено 🗑️.")
+
+
 @dp.message(Command("clear_cart"))
 async def cmd_clear_cart(message: types.Message):
     user_id = message.from_user.id
@@ -127,7 +141,7 @@ async def cmd_checkout(message: types.Message, state: FSMContext):
     user_cart = cart.get_cart(user_id)
 
     if not user_cart:
-        await message.answer("Ваш кошик порожній. Спочатку додайте печиво в кошик! 🍪")
+        await message.answer("Ваш кошик порожній. Спочатку додайте товар в кошик! 🛍️")
         return
 
     await state.set_state(CheckoutState.waiting_for_name)

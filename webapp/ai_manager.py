@@ -28,11 +28,14 @@ def fallback_reply(message: str, products: list, is_admin: bool, promos: dict = 
 
     # Product search / inventory query
     matching_prods = []
+    stop_words = {"про", "для", "які", "хто", "чим", "що", "або", "при", "від"}
+    words = [w for w in msg_lower.split() if len(w) > 2 and w not in stop_words]
+
     for p in products:
         p_name = (p.get("name") or "").lower()
         p_desc = (p.get("description") or "").lower()
         p_cat = (p.get("category") or "").lower()
-        if any(w in p_name or w in p_desc or w in p_cat for w in msg_lower.split() if len(w) > 2):
+        if any(w in p_name or w in p_desc or w in p_cat for w in words):
             matching_prods.append(p)
 
     if matching_prods:
@@ -94,33 +97,37 @@ def generate_reply(
     promos_str = json.dumps(promos or {}, ensure_ascii=False, indent=2)
 
     system_instruction = f"""
-Ти — інтелектуальний, експертний та приязний AI-Консультант і головний Керуючий інтернет-магазину особистих речей, фігурок, одягу та колекційних товарів "Store 🛍️".
+Ти — інтелектуальний AI-Консультант та Керуючий інтернет-магазину "Store & Collectibles 🛍️".
 
 ТВОЯ МІСІЯ:
-Забезпечувати преміальний сервіс, допомагати обрати товари, інформувати про стан товару (Mint, Sealed, Like New) та керувати магазином.
+Допомагати клієнтам обирати товари (фігурки, одяг, колекційні товари), відповідати на питання та обробляти команди.
+
+МОЖЛИВІ ДІЇ КОРИСТУВАЧА (action):
+- "question": Звичайне запитання або консультація.
+- "add_to_cart": Додати товар в кошик (product_id: int, quantity: int).
+- "remove_from_cart": Видалити товар з кошика (product_id: int).
+- "checkout": Оформити замовлення.
+- "apply_promo": Застосувати промокод (promo_code: str).
 
 ОБОВ'ЯЗКОВІ ПРАВИЛА:
-1. Категорично НЕ ВИГАДУЙ товарів, цін або наявності! Використовуй ВИКЛЮЧНО наданий список доступних продуктів (products.json).
-2. Відповідай дружньо, тепло та розгорнуто, тією ж мовою, якою пише користувач (за замовчуванням — українською або російською).
-3. ЗАВЖДИ пиши повноцінне, приємне та змістовне повідомлення у полі "reply".
-4. Повертай відповідь СУВОРО у форматі JSON.
+1. Категорично НЕ ВИГАДУЙ товарів чи цін! Використовуй ВИКЛЮЧНО наданий список доступних продуктів (products.json).
+2. Відповідай дружньо, тепло та розгорнуто, тією ж мовою, якою пише користувач (українською або англійською/російською).
+3. ЗАВЖДИ повертай JSON об'єкт з обов'язковими полями: "reply" та "action".
 """
 
     if is_admin:
         system_instruction += """
 👑 АДМІНІСТРАТИВНІ МОЖЛИВОСТІ (КОРИСТУВАЧ — АДМІНІСТРАТОР ВАШОГО МАГАЗИНУ):
 Зараз ви спілкуєтеся з АДМІНІСТРАТОРОМ магазину!
-Якщо він запитує про свій статус, адмінку чи права (наприклад "ти видишь у меня админку?"), обов'язково підтверди у полі "reply", що ти бачиш його адмін-права (👑) та напиши, що ти готовий виконувати його вказівки щодо товарів, категорій, замовлень і промокодів.
+Якщо він запитує про свій статус чи адмінку, підтверди у полі "reply", що ти бачиш його адмін-права (👑).
 
-Якщо він просить виконати конкретну дію у текстовій формі (наприклад: "Додай товар Наруто за 1500 грн в категорію Фігурки", "Видали товар ID 2", "Створи новий розділ Іграшки", "Видали категорію Одяг", "Додай промокод SALE10 на 10%", "Зміни статус замовлення 3 на completed"):
-Ти повинен відповісти ствердно в "reply" та встановити відповідний action і параметри:
-
-- Додати товар: action: "admin_add_product", "product_name": str, "product_price": float, "category_name": str, "condition": str, "description": str
-- Видалити товар: action: "admin_delete_product", "product_id": int або "product_name": str
-- Додати категорію/розділ: action: "admin_add_category", "category_name": str
-- Видалити категорію/розділ: action: "admin_delete_category", "category_name": str
-- Додати промокод: action: "admin_add_promo", "promo_code": str, "discount_percent": int
-- Змінити статус замовлення: action: "admin_update_order", "order_id": int, "new_status": str ("new", "processing", "completed", "cancelled")
+Якщо він просить виконати конкретну дію у текстовій формі:
+- Додати товар: action: "admin_add_product", product_name: str, product_price: float, category_name: str, condition: str, description: str
+- Видалити товар: action: "admin_delete_product", product_id: int, product_name: str
+- Додати категорію: action: "admin_add_category", category_name: str
+- Видалити категорію: action: "admin_delete_category", category_name: str
+- Додати промокод: action: "admin_add_promo", promo_code: str, discount_percent: int
+- Змінити статус замовлення: action: "admin_update_order", order_id: int, new_status: str ("new", "processing", "completed", "cancelled")
 """
 
     system_instruction += f"""
@@ -145,9 +152,8 @@ def generate_reply(
 
         contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
 
-        # Try gemini models in order of preference
         response = None
-        for m_name in ["gemini-3.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"]:
+        for m_name in ["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"]:
             try:
                 response = client.models.generate_content(
                     model=m_name,
@@ -164,23 +170,40 @@ def generate_reply(
                 print(f"[Gemini Model {m_name} Error]: {m_err}")
 
         if response and response.text:
-            response_text = response.text.strip()
-            parsed_json = json.loads(response_text)
+            cleaned_text = re.sub(r'^```json\s*|^```\s*|```$', '', response.text.strip(), flags=re.MULTILINE).strip()
+            parsed_json = json.loads(cleaned_text)
+
+            # Safely extract product_id as integer if available
+            p_id = parsed_json.get("product_id")
+            if p_id is not None:
+                try:
+                    p_id = int(p_id)
+                except (ValueError, TypeError):
+                    pass
+
+            o_id = parsed_json.get("order_id")
+            if o_id is not None:
+                try:
+                    o_id = int(o_id)
+                except (ValueError, TypeError):
+                    pass
+
             return {
                 "reply": str(parsed_json.get("reply") or "Вітаю! Чим можу допомогти?"),
                 "action": str(parsed_json.get("action") or "question"),
-                "product_id": parsed_json.get("product_id"),
-                "quantity": parsed_json.get("quantity"),
+                "product_id": p_id,
+                "order_id": o_id,
+                "quantity": parsed_json.get("quantity", 1),
                 "product_name": parsed_json.get("product_name"),
                 "product_price": parsed_json.get("product_price"),
                 "category_name": parsed_json.get("category_name"),
                 "condition": parsed_json.get("condition"),
                 "description": parsed_json.get("description"),
+                "promo_code": parsed_json.get("promo_code"),
                 "discount_percent": parsed_json.get("discount_percent"),
                 "new_status": parsed_json.get("new_status")
             }
     except Exception as e:
         print(f"[AI Manager Exception]: {e}")
 
-    # Seamless Smart Fallback if Gemini quota is exhausted
     return fallback_reply(message, products, is_admin, promos)
