@@ -418,19 +418,22 @@ async def cb_admin_stats(callback: types.CallbackQuery):
     stats = storage.get_analytics_summary()
 
     top_text = ""
-    for item_name, count in stats["top_products"]:
-        top_text += f"• {item_name}: **{count} шт.**\n"
+    for item_name, count in stats.get("top_products", []):
+        top_text += f"  • {item_name}: **{count} шт.**\n"
     if not top_text:
-        top_text = "Даних поки немає\n"
+        top_text = "  • Даних поки немає\n"
 
     text = (
-        "📊 **Аналітика та Статистика Магазину** 🍪\n\n"
-        f"📦 **Всього замовлень**: {stats['total_orders']}\n"
-        f"✅ **Виконаних замовлень**: {stats['completed_orders']}\n"
-        f"💰 **Загальний виторг**: {stats['total_revenue']} грн\n"
-        f"🏷️ **Середній чек**: {stats['avg_check']} грн\n"
-        f"👥 **Унікальних клієнтів**: {stats['unique_users']}\n\n"
-        f"🏆 **Топ-3 найпопулярніших товарів**:\n{top_text}"
+        "📊 **Дашборд Аналітики та Продажів** 🍪\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"📦 **Загалом замовлень**: `{stats.get('total_orders', 0)}` шт.\n"
+        f"✅ **Виконано успішно**: `{stats.get('completed_orders', 0)}` шт.\n"
+        f"💰 **Загальний виторг**: `{stats.get('total_revenue', 0)} грн`\n"
+        f"🏷️ **Середній чек**: `{stats.get('avg_check', 0)} грн`\n"
+        f"👥 **Унікальних покупців**: `{stats.get('unique_users', 0)}` осіб\n\n"
+        f"🏆 **Топ-3 популярні товари**:\n{top_text}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💡 *Всі дані оновлюються в режимі реального часу.*"
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -441,7 +444,7 @@ async def cb_admin_stats(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# ==================== 4. МАСОВА РОЗСИЛКА ====================
+# ==================== 4. МАСОВА РОЗСИЛКА ТА PUSH ====================
 
 @router.callback_query(F.data == "admin_broadcast")
 async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
@@ -452,9 +455,12 @@ async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdminBroadcast.text)
 
     text = (
-        "📢 **Масова Розсилка Повідомлень**\n\n"
-        f"Знайдено покупців у базі: **{users_count}**\n\n"
-        "Надішліть текст розсилки, який отримають усі користувачі:"
+        "📢 **Масова Push-Розсилка Повідомлень**\n\n"
+        f"👥 Отримувачів у базі: **{users_count}**\n\n"
+        "Надішліть текст розсилки.\n\n"
+        "💡 **Підказка (Кнопка)**: Ви можете додати кнопку у форматі:\n"
+        "`Текст повідомлення | Текст Кнопки | URL-посилання`\n"
+        "Наприклад:\n`Знижка -20% на фігурки! | 🛍 Відкрити магазин | https://t.me/yourbot`"
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -467,26 +473,40 @@ async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message(AdminBroadcast.text)
 async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot):
-    broadcast_text = message.text
+    full_text = message.text.strip()
     user_ids = storage.get_all_user_ids()
     await state.clear()
 
-    await message.answer(f"⏳ Розсилка запущена для {len(user_ids)} користувачів...")
+    reply_markup = None
+    broadcast_text = full_text
+
+    # Parse button syntax: Text | Button Label | URL
+    if "|" in full_text:
+        parts = [p.strip() for p in full_text.split("|")]
+        if len(parts) >= 3:
+            broadcast_text = parts[0]
+            btn_label = parts[1]
+            btn_url = parts[2]
+            reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=btn_label, url=btn_url)]
+            ])
+
+    await message.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
 
     success_count = 0
     fail_count = 0
 
     for uid in user_ids:
         try:
-            await bot.send_message(chat_id=int(uid), text=broadcast_text)
+            await bot.send_message(chat_id=int(uid), text=broadcast_text, reply_markup=reply_markup, parse_mode="Markdown")
             success_count += 1
         except Exception:
             fail_count += 1
 
     await message.answer(
-        f"📢 **Розсилка завершена!**\n\n"
+        f"📢 **Розсилку завершено!**\n\n"
         f"✅ Успішно доставлено: **{success_count}**\n"
-        f"❌ Помилок (заблокували бота): **{fail_count}**"
+        f"❌ Помилок: **{fail_count}**"
     )
 
 

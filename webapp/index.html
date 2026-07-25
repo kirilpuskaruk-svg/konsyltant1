@@ -20,26 +20,33 @@
         <span class="logo-emoji">🧸</span>
         <div>
           <h1>Store & Collectibles</h1>
-          <p class="subtitle">Особисті речі, фігурки та колекційки</p>
+          <p class="subtitle" data-i18n="subtitle">Особисті речі, фігурки та колекційки</p>
         </div>
       </div>
       <div class="header-actions">
+        <button class="lang-btn" id="langToggle" title="Змінити мову / Switch language">🇺🇦 UA</button>
         <div class="bonus-badge" id="bonusBadge">
           💰 <span id="userBonusesCount">0</span> ₴
         </div>
       </div>
     </header>
 
-    <!-- Search & Categories -->
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="🔍 Пошук речей та фігурок..." />
+    <!-- Search & AI Gift Bar -->
+    <div class="search-bar-wrapper">
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="🔍 Пошук речей та фігурок..." data-i18n-ph="search_placeholder" />
+        <button class="btn-mic" id="btnVoiceSearch" title="Голосовий пошук">🎙️</button>
+      </div>
+      <button class="btn-gift-wizard" id="btnOpenGiftModal">🎁 <span data-i18n="btn_gift_finder">Підбір подарунка</span></button>
     </div>
 
+    <!-- Categories & Wishlist Chip -->
     <div class="categories" id="categoriesContainer">
-      <button class="cat-chip active" data-cat="all">Всі</button>
-      <button class="cat-chip" data-cat="Фігурки">🧸 Фігурки</button>
-      <button class="cat-chip" data-cat="Одяг та Мерч">👕 Одяг та Мерч</button>
-      <button class="cat-chip" data-cat="Колекційне">✨ Колекційне</button>
+      <button class="cat-chip active" data-cat="all" data-i18n="cat_all">Всі</button>
+      <button class="cat-chip" data-cat="wishlist" id="chipWishlist">❤️ <span data-i18n="cat_wishlist">Обране</span> (<span id="wishlistCount">0</span>)</button>
+      <button class="cat-chip" data-cat="Фігурки">🧸 <span data-i18n="cat_figures">Фігурки</span></button>
+      <button class="cat-chip" data-cat="Одяг та Мерч">👕 <span data-i18n="cat_clothing">Одяг та Мерч</span></button>
+      <button class="cat-chip" data-cat="Колекційне">✨ <span data-i18n="cat_collectibles">Колекційне</span></button>
     </div>
 
     <!-- Products Grid -->
@@ -53,14 +60,14 @@
         <span class="cart-count" id="cartItemCount">0</span>
         <span class="cart-price" id="cartTotalPrice">0 ₴</span>
       </div>
-      <button class="btn-checkout" id="btnOpenCheckout">Переглянути кошик 🛒</button>
+      <button class="btn-checkout" id="btnOpenCheckout" data-i18n="btn_view_cart">Переглянути кошик 🛒</button>
     </div>
 
     <!-- Checkout Modal -->
     <div class="modal-overlay hidden" id="checkoutModal">
       <div class="modal-card">
         <div class="modal-header">
-          <h2>Оформлення Замовлення 📝</h2>
+          <h2 data-i18n="checkout_title">Оформлення Замовлення 📝</h2>
           <button class="close-modal" id="btnCloseModal">&times;</button>
         </div>
         <div class="modal-body">
@@ -72,8 +79,8 @@
 
           <!-- Promo Code Section -->
           <div class="promo-section">
-            <input type="text" id="promoInput" placeholder="Промокод (наприклад: YARIK20)" />
-            <button class="btn-apply-promo" id="btnApplyPromo">Застосувати</button>
+            <input type="text" id="promoInput" placeholder="Промокод (наприклад: YARIK20)" data-i18n-ph="promo_placeholder" />
+            <button class="btn-apply-promo" id="btnApplyPromo" data-i18n="btn_apply">Застосувати</button>
           </div>
           <div class="promo-message" id="promoMessage"></div>
 
@@ -81,44 +88,101 @@
           <div class="bonus-use-section">
             <label class="checkbox-label">
               <input type="checkbox" id="useBonusesCheckbox" />
-              Використати накопичений кешбек (<span id="availBonuses">0</span> ₴)
+              <span data-i18n="use_cashback">Використати накопичений кешбек</span> (<span id="availBonuses">0</span> ₴)
             </label>
           </div>
 
           <hr class="divider">
 
-          <!-- Shipping Form -->
+          <!-- Shipping Form with Nova Poshta Autocomplete -->
           <form id="orderForm">
             <div class="form-group">
-              <label>Ваше ПІБ / Ім'я:</label>
-              <input type="text" id="orderName" required placeholder="Олександр Петренко" />
+              <label data-i18n="label_name">Ваше ПІБ / Ім'я:</label>
+              <input type="text" id="orderName" required placeholder="Олександр Петренко" data-i18n-ph="ph_name" />
             </div>
             <div class="form-group">
-              <label>Номер телефону:</label>
+              <label data-i18n="label_phone">Номер телефону:</label>
               <input type="tel" id="orderPhone" required placeholder="+380991234567" />
             </div>
-            <div class="form-group">
-              <label>📦 Нова Пошта (Місто та № відділення / поштомату):</label>
-              <input type="text" id="orderAddress" required placeholder="Київ, Відділення №15" />
+
+            <!-- Nova Poshta Interactive Selector -->
+            <div class="form-group autocomplete-group">
+              <label>📦 <span data-i18n="np_city_label">Нова Пошта — Населений пункт:</span></label>
+              <input type="text" id="npCityInput" required placeholder="Почніть вводити місто (наприклад: Київ, Львів...)" autocomplete="off" data-i18n-ph="np_city_ph" />
+              <div class="autocomplete-dropdown hidden" id="npCityDropdown"></div>
             </div>
+
+            <div class="form-group autocomplete-group">
+              <label>🏬 <span data-i18n="np_warehouse_label">Відділення або Поштомат №:</span></label>
+              <input type="text" id="npWarehouseInput" required placeholder="Введіть № або адресу відділення..." autocomplete="off" data-i18n-ph="np_warehouse_ph" />
+              <div class="autocomplete-dropdown hidden" id="npWarehouseDropdown"></div>
+            </div>
+
+            <!-- Hidden field combining address -->
+            <input type="hidden" id="orderAddress" />
 
             <div class="order-summary">
               <div class="summary-row">
-                <span>Товари:</span>
+                <span data-i18n="sum_products">Товари:</span>
                 <span id="summarySubtotal">0 ₴</span>
               </div>
               <div class="summary-row discount-row" id="discountRow" style="display:none;">
-                <span>Знижка / Бонуси:</span>
+                <span data-i18n="sum_discount">Знижка / Бонуси:</span>
                 <span id="summaryDiscount">-0 ₴</span>
               </div>
               <div class="summary-row total-row">
-                <span>Разом до сплати:</span>
+                <span data-i18n="sum_total">Разом до сплати:</span>
                 <span id="summaryFinalTotal">0 ₴</span>
               </div>
             </div>
 
-            <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">Підтвердити замовлення 🎉</button>
+            <button type="submit" class="btn-confirm-order" id="btnConfirmOrder" data-i18n="btn_confirm_order">Підтвердити замовлення 🎉</button>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Gift Finder Modal -->
+    <div class="modal-overlay hidden" id="giftModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>🎁 <span data-i18n="gift_modal_title">AI-Підбір Подарунка</span></h2>
+          <button class="close-modal" id="btnCloseGiftModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="gift-wizard-step" id="giftStep1">
+            <label class="wizard-label" data-i18n="gift_for_who">Кому шукаєте подарунок?</label>
+            <div class="wizard-options">
+              <button class="wizard-chip active" data-val="friend">👦 / 👧 Другу чи Подрузі</button>
+              <button class="wizard-chip" data-val="partner">❤️ Коханій людині</button>
+              <button class="wizard-chip" data-val="kid">🧸 Дитині / Підлітку</button>
+              <button class="wizard-chip" data-val="myself">✨ Собі любимому</button>
+            </div>
+
+            <label class="wizard-label" data-i18n="gift_interests">Які інтереси?</label>
+            <div class="wizard-options">
+              <button class="wizard-chip active" data-val="all">🔮 Будь-які</button>
+              <button class="wizard-chip" data-val="figures">🧸 Фігурки & Аніме</button>
+              <button class="wizard-chip" data-val="merch">👕 Стильний одяг & Мерч</button>
+              <button class="wizard-chip" data-val="collectibles">✨ Колекційне</button>
+            </div>
+
+            <label class="wizard-label" data-i18n="gift_budget">Орієнтовний бюджет?</label>
+            <div class="wizard-options">
+              <button class="wizard-chip active" data-val="any">💰 Будь-який</button>
+              <button class="wizard-chip" data-val="under500">до 500 ₴</button>
+              <button class="wizard-chip" data-val="500-1500">500 – 1500 ₴</button>
+              <button class="wizard-chip" data-val="above1500">понад 1500 ₴</button>
+            </div>
+
+            <button class="btn-submit" id="btnFindGifts" data-i18n="btn_find_gifts">Знайти ідеальні подарунки 🚀</button>
+          </div>
+
+          <div class="gift-results hidden" id="giftResults">
+            <h3 class="gift-res-title">🎉 <span data-i18n="gift_found">Рекомендовано AI:</span></h3>
+            <div class="gift-products-list" id="giftProductsList"></div>
+            <button class="btn-submit btn-secondary" id="btnBackToWizard" style="margin-top: 14px;">🔄 Змінити параметри</button>
+          </div>
         </div>
       </div>
     </div>
