@@ -2,7 +2,9 @@
   {
     "id": 1,
     "name": "Колекційна фігурка Аня Форджер",
+    "name_en": "Anya Forger Collectible Figure",
     "description": "Оригінальна фігурка Spy x Family, висота 15 см.",
+    "description_en": "Original Spy x Family figure, 15 cm height.",
     "price": 1200,
     "in_stock": true,
     "category": "Фігурки",
@@ -17,7 +19,9 @@
   {
     "id": 2,
     "name": "Худі Cyberpunk 2077 (L)",
+    "name_en": "Cyberpunk 2077 Hoodie (L)",
     "description": "Офіційний мерч, якісна тканина, новий стан.",
+    "description_en": "Official merch, premium fabric, new condition.",
     "price": 1800,
     "in_stock": true,
     "category": "Одяг та Мерч",
@@ -28,7 +32,9 @@
   {
     "id": 3,
     "name": "Набір значків Genshin Impact",
+    "name_en": "Genshin Impact Pin Set",
     "description": "Колекційний набір з 5 металевих значків.",
+    "description_en": "Collectible set of 5 metallic enamel pins.",
     "price": 450,
     "in_stock": true,
     "category": "Колекційне",

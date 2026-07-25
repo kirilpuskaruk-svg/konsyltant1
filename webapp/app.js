@@ -159,16 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnOpenCheckout").addEventListener("click", openCheckoutModal);
   document.getElementById("btnCloseModal").addEventListener("click", closeCheckoutModal);
 
-  // Gift Modal
-  document.getElementById("btnOpenGiftModal").addEventListener("click", openGiftModal);
-  document.getElementById("btnCloseGiftModal").addEventListener("click", closeGiftModal);
-  document.getElementById("btnFindGifts").addEventListener("click", processGiftFinder);
-  document.getElementById("btnBackToWizard").addEventListener("click", () => {
-    document.getElementById("giftResults").classList.add("hidden");
-    document.getElementById("giftStep1").classList.remove("hidden");
-  });
-  initWizardChips();
-
   // Promo code
   document.getElementById("btnApplyPromo").addEventListener("click", applyPromoCode);
 
@@ -286,6 +276,8 @@ function filterAndRenderProducts() {
   filtered.forEach(p => {
     const isWish = wishlist.includes(p.id);
     const qtyInCart = cart[p.id] || 0;
+    const pName = (currentLang === 'en' && p.name_en) ? p.name_en : p.name;
+    const pDesc = (currentLang === 'en' && p.description_en) ? p.description_en : p.description;
 
     let flashBadge = "";
     let finalPrice = p.price;
@@ -302,13 +294,13 @@ function filterAndRenderProducts() {
         <button class="btn-wishlist-heart ${isWish ? 'active' : ''}" onclick="toggleWishlist(${p.id})">
           ${isWish ? '❤️' : '🤍'}
         </button>
-        <img src="${p.image_url}" alt="${p.name}" class="product-img" loading="lazy" />
+        <img src="${p.image_url}" alt="${pName}" class="product-img" loading="lazy" />
         ${flashBadge}
         <div class="condition-badge">${p.condition || 'New'}</div>
       </div>
       <div class="product-info">
-        <h3 class="product-title">${p.name}</h3>
-        <p class="product-desc">${p.description}</p>
+        <h3 class="product-title">${pName}</h3>
+        <p class="product-desc">${pDesc}</p>
         <div class="product-actions-bar">
           <div class="price-tag">
             ${p.flash_sale ? `<span style="text-decoration:line-through; font-size:12px; color:var(--text-muted); font-weight:normal; margin-right:4px;">${p.price}₴</span>${finalPrice} ₴` : `${p.price} ₴`}
@@ -498,51 +490,6 @@ function initNovaPoshtaAutocomplete() {
   });
 }
 
-// --- AI Gift Finder Modal ---
-function openGiftModal() {
-  document.getElementById("giftStep1").classList.remove("hidden");
-  document.getElementById("giftResults").classList.add("hidden");
-  document.getElementById("giftModal").classList.remove("hidden");
-}
-
-function closeGiftModal() {
-  document.getElementById("giftModal").classList.add("hidden");
-}
-
-function initWizardChips() {
-  document.querySelectorAll(".wizard-options").forEach(group => {
-    group.addEventListener("click", (e) => {
-      const chip = e.target.closest(".wizard-chip");
-      if (!chip) return;
-      group.querySelectorAll(".wizard-chip").forEach(c => c.classList.remove("active"));
-      chip.classList.add("active");
-    });
-  });
-}
-
-function processGiftFinder() {
-  document.getElementById("giftStep1").classList.add("hidden");
-  document.getElementById("giftResults").classList.remove("hidden");
-
-  const list = document.getElementById("giftProductsList");
-  list.innerHTML = "";
-
-  // Recommend 2-3 products randomly or by match
-  const giftItems = products.slice(0, 3);
-  giftItems.forEach(p => {
-    const item = document.createElement("div");
-    item.className = "cart-item-row";
-    item.innerHTML = `
-      <img src="${p.image_url}" class="cart-item-thumb" />
-      <div class="cart-item-info">
-        <div class="cart-item-title">${p.name}</div>
-        <div class="cart-item-subtotal">${p.price} ₴</div>
-      </div>
-      <button class="btn-add-cart" onclick="addToCart(${p.id}); closeGiftModal();" style="flex:0 0 auto; padding:8px 12px;">+ Додати</button>
-    `;
-    list.appendChild(item);
-  });
-}
 
 // --- Checkout Modal ---
 function openCheckoutModal() {
@@ -566,12 +513,14 @@ function renderModalCartItems() {
 
     const price = product.flash_sale ? Math.round(product.price * (1 - (product.flash_sale.discount_percent || 15)/100)) : product.price;
 
+    const pName = (currentLang === 'en' && product.name_en) ? product.name_en : product.name;
+
     const row = document.createElement("div");
     row.className = "cart-item-row";
     row.innerHTML = `
       <img src="${product.image_url}" class="cart-item-thumb" />
       <div class="cart-item-info">
-        <div class="cart-item-title">${product.name}</div>
+        <div class="cart-item-title">${pName}</div>
         <div class="cart-item-subtotal">${count} x ${price} ₴ = ${count * price} ₴</div>
       </div>
       <div class="cart-item-qty">

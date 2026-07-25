@@ -31,13 +31,12 @@
       </div>
     </header>
 
-    <!-- Search & AI Gift Bar -->
+    <!-- Search Bar -->
     <div class="search-bar-wrapper">
       <div class="search-bar">
         <input type="text" id="searchInput" placeholder="🔍 Пошук речей та фігурок..." data-i18n-ph="search_placeholder" />
         <button class="btn-mic" id="btnVoiceSearch" title="Голосовий пошук">🎙️</button>
       </div>
-      <button class="btn-gift-wizard" id="btnOpenGiftModal">🎁 <span data-i18n="btn_gift_finder">Підбір подарунка</span></button>
     </div>
 
     <!-- Categories & Wishlist Chip -->
@@ -142,50 +141,6 @@
       </div>
     </div>
 
-    <!-- AI Gift Finder Modal -->
-    <div class="modal-overlay hidden" id="giftModal">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h2>🎁 <span data-i18n="gift_modal_title">AI-Підбір Подарунка</span></h2>
-          <button class="close-modal" id="btnCloseGiftModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="gift-wizard-step" id="giftStep1">
-            <label class="wizard-label" data-i18n="gift_for_who">Кому шукаєте подарунок?</label>
-            <div class="wizard-options">
-              <button class="wizard-chip active" data-val="friend">👦 / 👧 Другу чи Подрузі</button>
-              <button class="wizard-chip" data-val="partner">❤️ Коханій людині</button>
-              <button class="wizard-chip" data-val="kid">🧸 Дитині / Підлітку</button>
-              <button class="wizard-chip" data-val="myself">✨ Собі любимому</button>
-            </div>
-
-            <label class="wizard-label" data-i18n="gift_interests">Які інтереси?</label>
-            <div class="wizard-options">
-              <button class="wizard-chip active" data-val="all">🔮 Будь-які</button>
-              <button class="wizard-chip" data-val="figures">🧸 Фігурки & Аніме</button>
-              <button class="wizard-chip" data-val="merch">👕 Стильний одяг & Мерч</button>
-              <button class="wizard-chip" data-val="collectibles">✨ Колекційне</button>
-            </div>
-
-            <label class="wizard-label" data-i18n="gift_budget">Орієнтовний бюджет?</label>
-            <div class="wizard-options">
-              <button class="wizard-chip active" data-val="any">💰 Будь-який</button>
-              <button class="wizard-chip" data-val="under500">до 500 ₴</button>
-              <button class="wizard-chip" data-val="500-1500">500 – 1500 ₴</button>
-              <button class="wizard-chip" data-val="above1500">понад 1500 ₴</button>
-            </div>
-
-            <button class="btn-submit" id="btnFindGifts" data-i18n="btn_find_gifts">Знайти ідеальні подарунки 🚀</button>
-          </div>
-
-          <div class="gift-results hidden" id="giftResults">
-            <h3 class="gift-res-title">🎉 <span data-i18n="gift_found">Рекомендовано AI:</span></h3>
-            <div class="gift-products-list" id="giftProductsList"></div>
-            <button class="btn-submit btn-secondary" id="btnBackToWizard" style="margin-top: 14px;">🔄 Змінити параметри</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script src="app.js"></script>
