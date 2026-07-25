@@ -20,30 +20,9 @@ def fallback_reply(message: str, products: list, is_admin: bool, promos: dict = 
 
     # Admin actions fallback
     if is_admin:
-        if any(k in msg_lower for k in ["розсилк", "рассылк", "отправь всем", "надішли всім"]):
-            b_text = message
-            cleaned = re.sub(
-                r"^(?:/broadcast|/send|зделай розсилку с таким текстом|сделай рассылку с текстом|зроби розсилку з текстом|зроби розсилку|зделай розсилку|сделай рассылку)\s*",
-                "",
-                b_text,
-                flags=re.IGNORECASE
-            ).strip()
-            if cleaned:
-                b_text = cleaned
-            elif "текстом" in msg_lower:
-                parts = re.split(r"текстом", message, flags=re.IGNORECASE, maxsplit=1)
-                if len(parts) > 1 and parts[1].strip():
-                    b_text = parts[1].strip()
-
-            return {
-                "reply": f"📢 Отримано вказівку на розсилку! Запускаю відправку всім користувачам: «{b_text}»",
-                "action": "admin_broadcast",
-                "broadcast_text": b_text
-            }
-
         if "адмін" in msg_lower or "права" in msg_lower or "статус" in msg_lower:
             return {
-                "reply": "Так, я підтверджую ваші адмін-права! 👑 Я можу керувати товарами, категоріями, промокодами, замовленнями та робити розсилку.",
+                "reply": "Так, я підтверджую ваші адмін-права! 👑 Я можу керувати товарами, категоріями, промокодами та замовленнями.",
                 "action": "question"
             }
 
@@ -140,10 +119,7 @@ def generate_reply(
         system_instruction += """
 👑 АДМІНІСТРАТИВНІ МОЖЛИВОСТІ (КОРИСТУВАЧ — АДМІНІСТРАТОР ВАШОГО МАГАЗИНУ):
 Зараз ви спілкуєтеся з АДМІНІСТРАТОРОМ магазину!
-Якщо він просить зробити розсилку (наприклад "Зделай розсилку с таким текстом..."), ти повинен відповісти ствердно та встановити:
-action: "admin_broadcast", broadcast_text: str (текст для розсилки користувачам).
-
-Також доступні інші адмін-дії:
+Доступні адмін-дії:
 - Додати товар: action: "admin_add_product", product_name: str, product_price: float, category_name: str, condition: str, description: str
 - Видалити товар: action: "admin_delete_product", product_id: int, product_name: str
 - Додати категорію: action: "admin_add_category", category_name: str

@@ -50,10 +50,9 @@ def get_main_admin_keyboard():
         ],
         [
             InlineKeyboardButton(text="🗂️ Керування Розділами", callback_data="admin_categories"),
-            InlineKeyboardButton(text="📢 Розсилка", callback_data="admin_broadcast")
+            InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")
         ],
         [
-            InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats"),
             InlineKeyboardButton(text="🏷️ Промокоди", callback_data="admin_promos")
         ],
         [
@@ -444,156 +443,7 @@ async def cb_admin_stats(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# ==================== 4. МАСОВА РОЗСИЛКА ТА PUSH ====================
-
-BROADCAST_STATE_FILE = "broadcast_state.json"
-
-
-def set_awaiting_broadcast(admin_id, flag=True):
-    data = storage._read_json(BROADCAST_STATE_FILE, {})
-    data[str(admin_id)] = flag
-    storage._write_json(BROADCAST_STATE_FILE, data)
-
-
-def is_awaiting_broadcast(admin_id):
-    data = storage._read_json(BROADCAST_STATE_FILE, {})
-    return data.get(str(admin_id), False)
-
-
-async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_msg: types.Message):
-    user_ids = storage.get_all_user_ids()
-    set_awaiting_broadcast(admin_id, False)
-
-    reply_markup = None
-    broadcast_text = full_text
-
-    # Parse button syntax: Text | Button Label | URL (using right-split to allow | inside message text)
-    if "|" in full_text:
-        parts = [p.strip() for p in full_text.rsplit("|", 2)]
-        if len(parts) == 3:
-            btn_label = parts[1]
-            btn_url = parts[2]
-            if btn_url.startswith(("http://", "https://", "tg://")):
-                broadcast_text = parts[0]
-                reply_markup = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text=btn_label, url=btn_url)]
-                ])
-
-    try:
-        await reply_to_msg.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
-    except Exception as err:
-        print(f"[Broadcast Start Reply Error]: {err}")
-
-    success_count = 0
-    fail_count = 0
-
-    for uid in user_ids:
-        try:
-            await bot.send_message(chat_id=int(uid), text=broadcast_text, reply_markup=reply_markup, parse_mode="Markdown")
-            success_count += 1
-        except Exception:
-            try:
-                # Retry plain text if markdown fails
-                await bot.send_message(chat_id=int(uid), text=broadcast_text, reply_markup=reply_markup)
-                success_count += 1
-            except Exception as e:
-                print(f"[Broadcast Send Error to {uid}]: {e}")
-                fail_count += 1
-
-    try:
-        await reply_to_msg.answer(
-            f"📢 **Розсилку завершено!**\n\n"
-            f"✅ Успішно доставлено: **{success_count}**\n"
-            f"❌ Помилок: **{fail_count}**"
-        )
-    except Exception as err:
-        print(f"[Broadcast Done Reply Error]: {err}")
-
-
-@router.message(Command("broadcast"))
-@router.message(Command("send"))
-@router.message(F.text & (F.text.startswith("/broadcast") | F.text.startswith("/send")))
-async def cmd_broadcast_direct(message: types.Message, bot: Bot):
-    user_id = message.from_user.id
-    storage.register_user(user_id)
-
-    if not is_admin(user_id):
-        await message.answer(f"⛔ У вас немає прав адміна. Ваш Telegram ID: `{user_id}`", parse_mode="Markdown")
-        return
-
-    # Remove command prefix (/broadcast or /send) preserving multiline text
-    raw_text = message.text
-    first_space = raw_text.find(" ")
-    first_newline = raw_text.find("\n")
-    split_pos = -1
-
-    if first_space != -1 and first_newline != -1:
-        split_pos = min(first_space, first_newline)
-    elif first_space != -1:
-        split_pos = first_space
-    elif first_newline != -1:
-        split_pos = first_newline
-
-    text_arg = raw_text[split_pos:].strip() if split_pos != -1 else ""
-
-    # Clean preambles like "Зделай розсилку с таким текстом" or "зроби розсилку"
-    low_text = text_arg.lower()
-    for preamble in ["зделай розсилку с таким текстом", "сделай рассылку с текстом", "зроби розсилку з текстом", "зроби розсилку"]:
-        if low_text.startswith(preamble):
-            text_arg = text_arg[len(preamble):].strip()
-            break
-
-    if not text_arg:
-        await message.answer(
-            "📢 **Команда масової розсилки**\n\n"
-            "Використання:\n"
-            "`/broadcast Текст розсилки`\n\n"
-            "Або з кнопкою:\n"
-            "`/broadcast Знижка -20%! | 🛍 Магазин | https://t.me/yourbot`",
-            parse_mode="Markdown"
-        )
-        return
-
-    await execute_broadcast(bot, user_id, text_arg, message)
-
-
-@router.callback_query(F.data == "admin_broadcast")
-async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
-        return
-
-    users_count = len(storage.get_all_user_ids())
-    set_awaiting_broadcast(callback.from_user.id, True)
-    await state.set_state(AdminBroadcast.text)
-
-    text = (
-        "📢 **Масова Push-Розсилка Повідомлень**\n\n"
-        f"👥 Отримувачів у базі: **{users_count}**\n\n"
-        "⚡ **Пряма команда для адміна:**\n"
-        "`/broadcast Текст розсилки`\n\n"
-        "💬 Або просто **надішліть будь-яке повідомлення у цей чат** — і воно відразу буде розіслано всім покупцям!\n\n"
-        "💡 **Розсилка з кнопкою-посиланням:**\n"
-        "`Текст розсилки | Текст кнопки | URL`\n\n"
-        "Приклад:\n"
-        "`/broadcast Акція! Знижки до -30%! | 🛍 В магазин | https://t.me/Bughjhgbot`"
-    )
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Скасувати", callback_data="admin_menu")]
-    ])
-
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
-    await callback.answer()
-
-
-@router.message(AdminBroadcast.text)
-async def process_broadcast(message: types.Message, state: FSMContext, bot: Bot):
-    if not is_admin(message.from_user.id):
-        return
-
-    if is_awaiting_broadcast(message.from_user.id):
-        await state.clear()
-        await execute_broadcast(bot, message.from_user.id, message.text.strip(), message)
+# ==================== 5. ЕКСПОРТ (TXT / CSV) ====================
 
 
 

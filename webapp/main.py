@@ -258,12 +258,6 @@ async def handle_user_text(message: types.Message, state: FSMContext):
     quantity = ai_response.get("quantity") or 1
     promo_code = ai_response.get("promo_code")
 
-    # Перевіряємо чи це адмін-розсилка звичайним текстом (без /)
-    if is_user_admin and action != "admin_broadcast":
-        low_t = user_text.lower()
-        if any(k in low_t for k in ["розсилк", "рассылк", "отправь всем", "надішли всім"]):
-            action = "admin_broadcast"
-
     # 4. Обробка розширених дій (actions)
     if action == "add_to_cart" and product_id:
         try:
@@ -391,46 +385,6 @@ async def handle_user_text(message: types.Message, state: FSMContext):
                     reply_text += f"\n\n⚠️ [AI Admin]: Замовлення #{o_id} не знайдено."
             else:
                 reply_text += "\n\n⚠️ [AI Admin]: Не вказано ID замовлення."
-
-        elif action == "admin_broadcast":
-            b_text = ai_response.get("broadcast_text") or user_text
-            cleaned_b_text = re.sub(
-                r"^(?:/broadcast|/send|зделай розсилку с таким текстом|сделай рассылку с текстом|зроби розсилку з текстом|зроби розсилку|зделай розсилку|сделай рассылку)\s*",
-                "",
-                b_text,
-                flags=re.IGNORECASE
-            ).strip()
-            if cleaned_b_text:
-                b_text = cleaned_b_text
-
-            u_ids = storage.get_all_user_ids()
-            await message.answer(f"⏳ [AI Admin]: Запускаю масову розсилку для {len(u_ids)} користувачів...")
-
-            reply_markup = None
-            if "|" in b_text:
-                parts = [p.strip() for p in b_text.rsplit("|", 2)]
-                if len(parts) == 3:
-                    btn_label = parts[1]
-                    btn_url = parts[2]
-                    if btn_url.startswith(("http://", "https://", "tg://")):
-                        b_text = parts[0]
-                        reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
-                            [types.InlineKeyboardButton(text=btn_label, url=btn_url)]
-                        ])
-
-            succ = 0
-            fail = 0
-            for uid in u_ids:
-                try:
-                    await bot.send_message(chat_id=int(uid), text=b_text, reply_markup=reply_markup, parse_mode="Markdown")
-                    succ += 1
-                except Exception:
-                    try:
-                        await bot.send_message(chat_id=int(uid), text=b_text, reply_markup=reply_markup)
-                        succ += 1
-                    except Exception:
-                        fail += 1
-            reply_text += f"\n\n📢 **[AI Admin]: Розсилку завершено!**\n✅ Успішно: **{succ}** | ❌ Помилок: **{fail}**"
 
     elif action == "manager":
         reply_text += "\n\n🔔 (Повідомлення передано менеджеру-людині)."
