@@ -22,16 +22,17 @@ def generate_product_description(product_name: str) -> str:
         f"привабливий та продаючий опис українською мовою для товару з назвою: «{product_name}».\n"
         f"Опис повинен бути довжиною 2-4 речення з красивими емодзі та описом якості матеріалів/деталізації. Поверни ТІЛЬКИ опис без зайвих вступних слів."
     )
-    try:
-        client = get_client()
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt
-        )
-        if response.text:
-            return response.text.strip()
-    except Exception as e:
-        print(f"[Generate Description Error]: {e}")
+    client = get_client()
+    for m_name in ["gemini-3.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"]:
+        try:
+            response = client.models.generate_content(
+                model=m_name,
+                contents=prompt
+            )
+            if response and response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"[Generate Description {m_name} Error]: {e}")
     return f"Преміальна фігурка {product_name}. Висока деталізація, оригінальний дизайн та якісні матеріали. Ідеальний подарунок у колекцію! ✨"
 
 
@@ -172,7 +173,7 @@ def generate_reply(
         contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
 
         response = None
-        for m_name in ["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"]:
+        for m_name in ["gemini-3.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash"]:
             try:
                 response = client.models.generate_content(
                     model=m_name,
