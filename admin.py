@@ -467,16 +467,17 @@ async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_ms
     reply_markup = None
     broadcast_text = full_text
 
-    # Parse button syntax: Text | Button Label | URL
+    # Parse button syntax: Text | Button Label | URL (using right-split to allow | inside message text)
     if "|" in full_text:
-        parts = [p.strip() for p in full_text.split("|")]
-        if len(parts) >= 3:
-            broadcast_text = parts[0]
+        parts = [p.strip() for p in full_text.rsplit("|", 2)]
+        if len(parts) == 3:
             btn_label = parts[1]
             btn_url = parts[2]
-            reply_markup = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text=btn_label, url=btn_url)]
-            ])
+            if btn_url.startswith(("http://", "https://", "tg://")):
+                broadcast_text = parts[0]
+                reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text=btn_label, url=btn_url)]
+                ])
 
     try:
         await reply_to_msg.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
@@ -538,9 +539,8 @@ async def cmd_broadcast_direct(message: types.Message, bot: Bot):
     # Clean preambles like "Зделай розсилку с таким текстом" or "зроби розсилку"
     low_text = text_arg.lower()
     for preamble in ["зделай розсилку с таким текстом", "сделай рассылку с текстом", "зроби розсилку з текстом", "зроби розсилку"]:
-        if preamble in low_text:
-            idx = low_text.find(preamble) + len(preamble)
-            text_arg = text_arg[idx:].strip()
+        if low_text.startswith(preamble):
+            text_arg = text_arg[len(preamble):].strip()
             break
 
     if not text_arg:

@@ -247,7 +247,11 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
     # 4. Обробка розширених дій (actions)
     if action == "add_to_cart" and product_id:
-        success, cart_msg = cart.add_to_cart(user_id, product_id, quantity, products)
+        try:
+            qty_int = int(re.sub(r"\D", "", str(quantity))) if quantity else 1
+        except Exception:
+            qty_int = 1
+        success, cart_msg = cart.add_to_cart(user_id, product_id, qty_int, products)
         if not success:
             reply_text += f"\n\n⚠️ ({cart_msg})"
 
@@ -286,11 +290,15 @@ async def handle_user_text(message: types.Message, state: FSMContext):
             st_map = {"new": "🆕 Нове", "processing": "⏳ В обробці", "completed": "✅ Виконано", "cancelled": "❌ Скасовано"}
             st_str = st_map.get(last_order.get("status"), last_order.get("status"))
             reply_text += f"\n\n📦 Замовлення #{last_order.get('order_id')}: статус **{st_str}** (сума: {last_order.get('total_price')} грн)."
+
     # --- AUTOMATIC AI ADMIN ACTIONS ---
     elif is_user_admin and action.startswith("admin_"):
         if action == "admin_add_product":
             p_name = ai_response.get("product_name") or "Новий товар"
-            p_price = float(ai_response.get("product_price") or 0.0)
+            raw_p = str(ai_response.get("product_price") or "0")
+            clean_p = re.sub(r"[^\d.]", "", raw_p.replace(",", "."))
+            p_price = float(clean_p) if clean_p else 0.0
+
             cat_name = ai_response.get("category_name") or "Фігурки"
             cond = ai_response.get("condition") or "Mint 10/10"
             desc = ai_response.get("description") or "Якісний колекційний товар"
@@ -316,9 +324,9 @@ async def handle_user_text(message: types.Message, state: FSMContext):
             p_name = ai_response.get("product_name")
             target = None
             if p_id:
-                target = next((p for p in products if p["id"] == p_id), None)
+                target = next((p for p in products if p.get("id") == p_id or str(p.get("id")) == str(p_id)), None)
             elif p_name:
-                target = next((p for p in products if p_name.lower() in p["name"].lower()), None)
+                target = next((p for p in products if p_name.lower() in (p.get("name") or "").lower()), None)
             
             if target:
                 products.remove(target)
@@ -343,12 +351,27 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
         elif action == "admin_add_promo":
             pr_code = (ai_response.get("promo_code") or "").strip().upper()
-            pct = int(ai_response.get("discount_percent") or 10)
+            raw_pct = str(ai_response.get("discount_percent") or "10")
+            clean_pct = re.sub(r"\D", "", raw_pct)
+            pct = int(clean_pct) if clean_pct else 10
+
             if pr_code:
                 promos = web_server.load_promos()
                 promos[pr_code] = {"discount_percent": pct, "active": True}
                 web_server.save_promos(promos)
                 reply_text += f"\n\n🏷️ [AI Admin]: Промокод `{pr_code}` на **{pct}%** активовано!"
+
+        elif action == "admin_update_order":
+            o_id = ai_response.get("order_id")
+            n_st = ai_response.get("new_status") or "completed"
+            if o_id:
+                updated = storage.update_order_status(o_id, n_st)
+                if updated:
+                    reply_text += f"\n\n📦 [AI Admin]: Статус замовлення #{o_id} змінено на **{n_st}**!"
+                else:
+                    reply_text += f"\n\n⚠️ [AI Admin]: Замовлення #{o_id} не знайдено."
+            else:
+                reply_text += "\n\n⚠️ [AI Admin]: Не вказано ID замовлення."
 
         elif action == "admin_broadcast":
             b_text = ai_response.get("broadcast_text") or user_text
@@ -357,12 +380,15 @@ async def handle_user_text(message: types.Message, state: FSMContext):
 
             reply_markup = None
             if "|" in b_text:
-                parts = [p.strip() for p in b_text.split("|")]
-                if len(parts) >= 3:
-                    b_text = parts[0]
-                    reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
-                        [types.InlineKeyboardButton(text=parts[1], url=parts[2])]
-                    ])
+                parts = [p.strip() for p in b_text.rsplit("|", 2)]
+                if len(parts) == 3:
+                    btn_label = parts[1]
+                    btn_url = parts[2]
+                    if btn_url.startswith(("http://", "https://", "tg://")):
+                        b_text = parts[0]
+                        reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
+                            [types.InlineKeyboardButton(text=btn_label, url=btn_url)]
+                        ])
 
             succ = 0
             fail = 0

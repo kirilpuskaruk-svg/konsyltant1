@@ -3,6 +3,7 @@
     { "source": "/api/products", "destination": "/api/products.py" },
     { "source": "/api/categories", "destination": "/api/categories.py" },
     { "source": "/api/user_bonuses", "destination": "/api/user_bonuses.py" },
+    { "source": "/api/validate_promo", "destination": "/api/validate_promo.py" },
     { "source": "/api/checkout", "destination": "/api/checkout.py" },
     { "source": "/api/telegram", "destination": "/api/telegram.py" }
   ]
