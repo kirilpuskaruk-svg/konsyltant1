@@ -478,7 +478,10 @@ async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_ms
                 [InlineKeyboardButton(text=btn_label, url=btn_url)]
             ])
 
-    await reply_to_msg.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
+    try:
+        await reply_to_msg.answer(f"⏳ Push-розсилка запущена для {len(user_ids)} користувачів...")
+    except Exception as err:
+        print(f"[Broadcast Start Reply Error]: {err}")
 
     success_count = 0
     fail_count = 0
@@ -488,17 +491,27 @@ async def execute_broadcast(bot: Bot, admin_id: int, full_text: str, reply_to_ms
             await bot.send_message(chat_id=int(uid), text=broadcast_text, reply_markup=reply_markup, parse_mode="Markdown")
             success_count += 1
         except Exception:
-            fail_count += 1
+            try:
+                # Retry plain text if markdown fails
+                await bot.send_message(chat_id=int(uid), text=broadcast_text, reply_markup=reply_markup)
+                success_count += 1
+            except Exception as e:
+                print(f"[Broadcast Send Error to {uid}]: {e}")
+                fail_count += 1
 
-    await reply_to_msg.answer(
-        f"📢 **Розсилку завершено!**\n\n"
-        f"✅ Успішно доставлено: **{success_count}**\n"
-        f"❌ Помилок: **{fail_count}**"
-    )
+    try:
+        await reply_to_msg.answer(
+            f"📢 **Розсилку завершено!**\n\n"
+            f"✅ Успішно доставлено: **{success_count}**\n"
+            f"❌ Помилок: **{fail_count}**"
+        )
+    except Exception as err:
+        print(f"[Broadcast Done Reply Error]: {err}")
 
 
 @router.message(Command("broadcast"))
 @router.message(Command("send"))
+@router.message(F.text & (F.text.startswith("/broadcast") | F.text.startswith("/send")))
 async def cmd_broadcast_direct(message: types.Message, bot: Bot):
     if not is_admin(message.from_user.id):
         return
